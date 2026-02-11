@@ -1,11 +1,21 @@
 import { useState, useMemo, useRef } from "react";
 
-// ── Workflow Definition ──────────────────────────────────────────────────
-const PHASES = [
-  { id: 1, name: "Budget Review & Approval", color: "#1e40af", bg: "#eff6ff", border: "#bfdbfe" },
-  { id: 2, name: "Funding Request", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
-  { id: 3, name: "Signatures", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  { id: 4, name: "Final Processing & System Updates", color: "#047857", bg: "#ecfdf5", border: "#a7f3d0" },
+// ══════════════════════════════════════════════════════════════════════════
+// SHARED DATA MODEL
+// ══════════════════════════════════════════════════════════════════════════
+
+const REGIONS = ["Region 2 - New York", "Region 3 - Philadelphia", "Region 4 - Atlanta", "Region 5 - Chicago", "Region 9 - San Francisco"];
+const PROGRAMS = ["Section 8", "PRAC"];
+
+const STATUS_CODES = [
+  { code: "01", label: "Not Started", color: "#94a3b8" },
+  { code: "02", label: "Documentation Received", color: "#60a5fa" },
+  { code: "03", label: "Awaiting Funding", color: "#f59e0b" },
+  { code: "04", label: "In Signature Process", color: "#a78bfa" },
+  { code: "05", label: "In Final Processing", color: "#2dd4bf" },
+  { code: "06", label: "Complete", color: "#34d399" },
+  { code: "90", label: "Pending Corrections", color: "#f87171" },
+  { code: "99", label: "On Hold", color: "#cbd5e1" },
 ];
 
 const ROLES = {
@@ -19,37 +29,39 @@ const ROLES = {
   SYS: { label: "Contract Admin / Systems", short: "Systems", color: "#475569", bg: "#f8fafc", icon: "💻" },
 };
 
-const WORKFLOW_STEPS = [
-  { id: "1.0", phase: 1, role: "HPA", type: "action", label: "Log incoming correspondence in AMPS", dateField: "Date_AMPS_Log_Created", description: "HPA creates a LOG entry in AMPS for the incoming renewal package.", programNote: "BOTH", required: true, forwardTo: "1.1", forwardLabel: "Forward to Account Executive" },
-  { id: "1.1", phase: 1, role: "AE", type: "action", label: "Receive & review renewal package from Owner/Agent", dateField: "Date_Rcvd_From_AE", description: "AE receives the owner's renewal documentation and reviews for completeness.", programNote: "BOTH", required: true, forwardTo: "1.2", forwardLabel: "Proceed to Completeness Check" },
-  { id: "1.2", phase: 1, role: "AE", type: "decision", label: "Package complete?", dateField: null, description: "AE determines whether all required documentation has been submitted.", programNote: "S8: HUD-9624, 9625, rent roll, REAC>60, FMR comparison.\nPRAC: Budget worksheet, service coord reports, budget alignment.", isDecision: true, forwardTo: "1.3", forwardLabel: "Yes — Package Complete", altForwardTo: "1.2A", altForwardLabel: "No — Return for Corrections" },
-  { id: "1.2A", phase: 1, role: "AE", type: "error", label: "Return to OA for corrections", dateField: "Date_Sent_Corrections_to_OA", description: "Package is incomplete — AE returns to Owner/Agent with list of needed items.", programNote: "BOTH", isCorrection: true, forwardTo: "1.1", forwardLabel: "Corrections Received — Re-review" },
-  { id: "1.3", phase: 1, role: "AE", type: "action", label: "Determine renewal option & calculate funding need", dateField: "Date_Renewal_Option_Determined", description: "AE determines the appropriate renewal option and calculates the funding amount needed.", programNote: "S8: Mark-to-Market, At/Below Comparable, etc.\nPRAC: Standard renewal based on operating budget.", forwardTo: "1.4", forwardLabel: "Forward to Regional Funding Staff" },
-  { id: "1.4", phase: 1, role: "AE", type: "action", label: "Forward to Regional Funding Staff", dateField: "Date_Sent_To_Funding", description: "AE prepares routing slip/funding sheet and sends to regional funding specialist.", programNote: "BOTH", required: true, forwardTo: "2.0", forwardLabel: "Route to Funding Staff" },
-
-  { id: "2.0", phase: 2, role: "FUND", type: "action", label: "Receive package & verify funding calculations", dateField: "Date_Funding_Received_Package", description: "Funding specialist receives the package and verifies all funding calculations are correct.", programNote: "BOTH", required: true, forwardTo: "2.1", forwardLabel: "Proceed to Budget Check" },
-  { id: "2.1", phase: 2, role: "FUND", type: "decision", label: "Sufficient regional budget authority?", dateField: null, description: "Funding staff checks whether there is enough budget authority in the region.", programNote: "S8: Check against regional PBRA allocation.\nPRAC: Check against PRAC authority.", isDecision: true, forwardTo: "2.2", forwardLabel: "Submit Funding Request to HQ" },
-  { id: "2.2", phase: 2, role: "FUND", type: "action", label: "Submit funding request to HQ", dateField: "Date_Sent_Fund_Req", description: "Regional funding staff submits a formal funding request to HUD Headquarters.", programNote: "BOTH", required: true, forwardTo: "2.3", forwardLabel: "Awaiting HQ Response" },
-  { id: "2.3", phase: 2, role: "HQ", type: "action", label: "HQ reviews & confirms funding", dateField: "Date_Fund_Rcvd_1", description: "HUD HQ reviews the funding request and confirms budget authority availability.", programNote: "S8: Verify PBRA budget authority.\nPRAC: Verify PRAC authority & check iCON.", required: true, forwardTo: "2.4", forwardLabel: "Funding Confirmed — Prepare Contract" },
-  { id: "2.3A", phase: 2, role: "FUND", type: "action", label: "Additional funding request (if needed)", dateField: "Date_Sent_Fund_Req_2", description: "If initial funding is insufficient, submit a follow-up request for additional funds.", programNote: "BOTH", isOptional: true, forwardTo: "2.3B", forwardLabel: "Submit Additional Request" },
-  { id: "2.3B", phase: 2, role: "HQ", type: "action", label: "Additional funding confirmed", dateField: "Date_Fund_Rcvd_2", description: "HQ confirms additional budget authority.", programNote: "BOTH", isOptional: true, forwardTo: "2.4", forwardLabel: "All Funding Confirmed" },
-  { id: "2.4", phase: 2, role: "FUND", type: "action", label: "Prepare contract document for signatures", dateField: "Date_Contract_Prepared", description: "With funding confirmed, funding staff prepares the actual contract document for the signature routing process.", programNote: "BOTH", forwardTo: "3.0", forwardLabel: "Route Contract for Signatures" },
-
-  { id: "3.0", phase: 3, role: "FUND", type: "action", label: "Send contract to Owner/Agent for signature", dateField: "Date_Sent_OA_Sign", description: "Prepared contract is sent to the property Owner/Agent for review and signature.", programNote: "BOTH", required: true, forwardTo: "3.1", forwardLabel: "Awaiting Owner Signature" },
-  { id: "3.1", phase: 3, role: "OA", type: "action", label: "Owner/Agent signs & returns contract", dateField: "Date_Rcvd_OA_Sign", description: "Owner/Agent reviews, signs, and returns the executed contract.", programNote: "BOTH", required: true, forwardTo: "3.2", forwardLabel: "Forward to Branch Chief" },
-  { id: "3.1A", phase: 3, role: "FUND", type: "error", label: "Contract returned for corrections", dateField: "Date_Sent_Corrections", description: "If contract has errors, it is returned for corrections before re-sending.", programNote: "BOTH", isCorrection: true, forwardTo: "3.0", forwardLabel: "Corrections Complete — Re-send" },
-  { id: "3.2", phase: 3, role: "BC", type: "action", label: "Branch Chief reviews & signs", dateField: "Date_Sent_BC_Sign", description: "Branch Chief receives the owner-signed contract for review and government signature.", programNote: "BOTH", required: true, forwardTo: "3.3", forwardLabel: "Awaiting BC Signature" },
-  { id: "3.3", phase: 3, role: "BC", type: "action", label: "Branch Chief signature received", dateField: "Date_Rcvd_BC_Sign", description: "Branch Chief has reviewed and signed the contract. Ready for final processing.", programNote: "BOTH", required: true, forwardTo: "4.0", forwardLabel: "Route to Fort Worth" },
-
-  { id: "4.0", phase: 4, role: "BC", type: "action", label: "Forward to Fort Worth / ACC for processing", dateField: "Date_Sent_FW", description: "Fully signed contract is forwarded to Fort Worth Accounting Center for final processing and execution.", programNote: "BOTH", required: true, forwardTo: "4.1", forwardLabel: "Awaiting Fort Worth Processing" },
-  { id: "4.1", phase: 4, role: "FW", type: "action", label: "Fort Worth processes & executes contract", dateField: "Date_FW_Complete", description: "Fort Worth/ACC processes the contract, enters it into the system, and executes it.", programNote: "BOTH", required: true, forwardTo: "4.2", forwardLabel: "Processing Complete — Update Systems" },
-  { id: "4.2", phase: 4, role: "SYS", type: "action", label: "Update ARAMS / iCON", dateField: "Date_Systems_Updated", description: "Contract administration updates the relevant system of record.", programNote: "S8: Update ARAMS.\nPRAC: Update iCON.\n(CONDITIONAL — only step that truly differs by program)", required: true, forwardTo: "4.3", forwardLabel: "Systems Updated — Verify LOCCS" },
-  { id: "4.3", phase: 4, role: "SYS", type: "action", label: "LOCCS verification complete", dateField: "Date_LOCCS_Complete", description: "Final verification in LOCCS that disbursement pathways are correctly set up.", programNote: "BOTH", required: true, forwardTo: "4.4", forwardLabel: "LOCCS Verified — Close Log" },
-  { id: "4.4", phase: 4, role: "HPA", type: "action", label: "Close AMPS log", dateField: "Date_AMPS_Log_Closed", description: "HPA closes the original AMPS log entry, completing the tracking cycle.", programNote: "BOTH", forwardTo: "4.5", forwardLabel: "Mark Complete" },
-  { id: "4.5", phase: 4, role: "SYS", type: "success", label: "Contract executed — Renewal complete", dateField: "Date_Contract_Executed", description: "The contract renewal is officially complete and fully executed in all systems.", programNote: "BOTH", required: true, isFinal: true },
+const PHASES = [
+  { id: 1, name: "Budget Review & Approval", color: "#1e40af", bg: "#eff6ff", border: "#bfdbfe" },
+  { id: 2, name: "Funding Request", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
+  { id: 3, name: "Signatures", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  { id: 4, name: "Final Processing & System Updates", color: "#047857", bg: "#ecfdf5", border: "#a7f3d0" },
 ];
 
-// ── Staff Directory (for "Acting As" dropdown) ───────────────────────────
+const WORKFLOW_STEPS = [
+  { id: "1.0", phase: 1, role: "HPA", type: "action", label: "Log incoming correspondence in AMPS", dateField: "Date_AMPS_Log_Created", programNote: "BOTH", required: true, forwardTo: "1.1", forwardLabel: "Forward to Account Executive", description: "HPA creates a LOG entry in AMPS for the incoming renewal package." },
+  { id: "1.1", phase: 1, role: "AE", type: "action", label: "Receive & review renewal package", dateField: "Date_Rcvd_From_AE", programNote: "BOTH", required: true, forwardTo: "1.2", forwardLabel: "Proceed to Completeness Check", description: "AE receives the owner's renewal documentation and reviews for completeness." },
+  { id: "1.2", phase: 1, role: "AE", type: "decision", label: "Package complete?", dateField: null, programNote: "S8: HUD-9624, 9625, rent roll, REAC>60, FMR comparison.\nPRAC: Budget worksheet, service coord reports, budget alignment.", isDecision: true, forwardTo: "1.3", forwardLabel: "Yes — Complete", altForwardTo: "1.2A", altForwardLabel: "No — Corrections", description: "AE determines whether all required documentation has been submitted." },
+  { id: "1.2A", phase: 1, role: "AE", type: "error", label: "Return to OA for corrections", dateField: "Date_Sent_Corrections_to_OA", programNote: "BOTH", isCorrection: true, forwardTo: "1.1", forwardLabel: "Corrections Received — Re-review", description: "Package is incomplete — AE returns to Owner/Agent with list of needed items." },
+  { id: "1.3", phase: 1, role: "AE", type: "action", label: "Determine renewal option & calculate funding", dateField: "Date_Renewal_Option_Determined", programNote: "S8: Mark-to-Market, At/Below Comparable, etc.\nPRAC: Standard renewal based on operating budget.", forwardTo: "1.4", forwardLabel: "Forward to Funding Staff", description: "AE determines the appropriate renewal option and calculates funding." },
+  { id: "1.4", phase: 1, role: "AE", type: "action", label: "Forward to Regional Funding Staff", dateField: "Date_Sent_To_Funding", programNote: "BOTH", required: true, forwardTo: "2.0", forwardLabel: "Route to Funding", description: "AE prepares routing slip/funding sheet and sends to regional funding specialist." },
+  { id: "2.0", phase: 2, role: "FUND", type: "action", label: "Receive & verify funding calculations", dateField: "Date_Funding_Received_Package", programNote: "BOTH", required: true, forwardTo: "2.1", forwardLabel: "Proceed to Budget Check", description: "Funding specialist receives the package and verifies all calculations." },
+  { id: "2.1", phase: 2, role: "FUND", type: "decision", label: "Sufficient regional budget authority?", dateField: null, programNote: "S8: Check PBRA allocation.\nPRAC: Check PRAC authority.", isDecision: true, forwardTo: "2.2", forwardLabel: "Submit to HQ", description: "Funding staff checks regional budget authority." },
+  { id: "2.2", phase: 2, role: "FUND", type: "action", label: "Submit funding request to HQ", dateField: "Date_Sent_Fund_Req", programNote: "BOTH", required: true, forwardTo: "2.3", forwardLabel: "Awaiting HQ", description: "Regional funding staff submits formal request to HQ." },
+  { id: "2.3", phase: 2, role: "HQ", type: "action", label: "HQ reviews & confirms funding", dateField: "Date_Fund_Rcvd_1", programNote: "S8: Verify PBRA authority.\nPRAC: Verify PRAC authority & iCON.", required: true, forwardTo: "2.4", forwardLabel: "Funding Confirmed", description: "HUD HQ reviews and confirms budget authority." },
+  { id: "2.4", phase: 2, role: "FUND", type: "action", label: "Prepare contract for signatures", dateField: "Date_Contract_Prepared", programNote: "BOTH", forwardTo: "3.0", forwardLabel: "Route for Signatures", description: "Funding staff prepares the contract document." },
+  { id: "3.0", phase: 3, role: "FUND", type: "action", label: "Send contract to Owner/Agent", dateField: "Date_Sent_OA_Sign", programNote: "BOTH", required: true, forwardTo: "3.1", forwardLabel: "Awaiting OA Signature", description: "Contract sent to Owner/Agent for signature." },
+  { id: "3.1", phase: 3, role: "OA", type: "action", label: "Owner/Agent signs & returns", dateField: "Date_Rcvd_OA_Sign", programNote: "BOTH", required: true, forwardTo: "3.2", forwardLabel: "Forward to Branch Chief", description: "Owner/Agent reviews, signs, and returns the contract." },
+  { id: "3.1A", phase: 3, role: "FUND", type: "error", label: "Contract returned for corrections", dateField: "Date_Sent_Corrections", programNote: "BOTH", isCorrection: true, forwardTo: "3.0", forwardLabel: "Corrections Complete — Re-send", description: "Contract has errors — returned for corrections." },
+  { id: "3.2", phase: 3, role: "BC", type: "action", label: "Branch Chief reviews & signs", dateField: "Date_Sent_BC_Sign", programNote: "BOTH", required: true, forwardTo: "3.3", forwardLabel: "Awaiting BC Signature", description: "Branch Chief receives for review and government signature." },
+  { id: "3.3", phase: 3, role: "BC", type: "action", label: "Branch Chief signature received", dateField: "Date_Rcvd_BC_Sign", programNote: "BOTH", required: true, forwardTo: "4.0", forwardLabel: "Route to Fort Worth", description: "BC signed. Ready for final processing." },
+  { id: "4.0", phase: 4, role: "BC", type: "action", label: "Forward to Fort Worth / ACC", dateField: "Date_Sent_FW", programNote: "BOTH", required: true, forwardTo: "4.1", forwardLabel: "Awaiting FW Processing", description: "Signed contract forwarded to Fort Worth ACC." },
+  { id: "4.1", phase: 4, role: "FW", type: "action", label: "Fort Worth processes & executes", dateField: "Date_FW_Complete", programNote: "BOTH", required: true, forwardTo: "4.2", forwardLabel: "Update Systems", description: "Fort Worth processes and executes contract." },
+  { id: "4.2", phase: 4, role: "SYS", type: "action", label: "Update ARAMS / iCON", dateField: "Date_Systems_Updated", programNote: "S8: Update ARAMS.\nPRAC: Update iCON.", required: true, forwardTo: "4.3", forwardLabel: "Verify LOCCS", description: "Update relevant system of record." },
+  { id: "4.3", phase: 4, role: "SYS", type: "action", label: "LOCCS verification", dateField: "Date_LOCCS_Complete", programNote: "BOTH", required: true, forwardTo: "4.4", forwardLabel: "Close Log", description: "Verify LOCCS disbursement pathways." },
+  { id: "4.4", phase: 4, role: "HPA", type: "action", label: "Close AMPS log", dateField: "Date_AMPS_Log_Closed", programNote: "BOTH", forwardTo: "4.5", forwardLabel: "Mark Complete", description: "HPA closes the AMPS log entry." },
+  { id: "4.5", phase: 4, role: "SYS", type: "success", label: "Contract executed — Complete", dateField: "Date_Contract_Executed", programNote: "BOTH", required: true, isFinal: true, description: "Contract renewal officially complete." },
+];
+
+// ── Staff Directory ──────────────────────────────────────────────────────
 const STAFF = [
   { id: "self", name: "— My Actions —", role: null },
   { id: "bc1", name: "T. Walsh", role: "Branch Chief", region: "Region 2" },
@@ -67,15 +79,11 @@ const STAFF = [
   { id: "hpa2", name: "B. Kim", role: "HPA", region: "Region 2" },
 ];
 
-// ── Sample Contracts (with expiration dates for alert filtering) ──────────
+// ── Sample Contracts ─────────────────────────────────────────────────────
 const TODAY = new Date();
-const daysFromNow = (n) => {
-  const d = new Date(TODAY);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split("T")[0];
-};
+const daysFromNow = (n) => { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d.toISOString().split("T")[0]; };
 
-const SAMPLE_CONTRACTS = [
+const CONTRACTS_INIT = [
   { id: 1, contractNum: "HAP-10042", fhaNum: "123-45678", propName: "Sunrise Manor Apartments", program: "Section 8", region: "Region 4 - Atlanta", ae: "R. Williams", branchChief: "P. Morgan", fundingSpec: "M. Torres", units: 156, monthlyHAP: 87500, renewalOption: "Option 2: At/Below Comparable", contractExpiration: daysFromNow(45) },
   { id: 2, contractNum: "HAP-10078", fhaNum: "456-78901", propName: "Oak Creek Village", program: "PRAC", region: "Region 5 - Chicago", ae: "S. Patel", branchChief: "N. Okafor", fundingSpec: "C. Rivera", units: 64, monthlyHAP: 32400, renewalOption: "Standard Renewal", contractExpiration: daysFromNow(88) },
   { id: 3, contractNum: "HAP-10115", fhaNum: "789-01234", propName: "Cedar Hill Estates", program: "Section 8", region: "Region 2 - New York", ae: "K. Thompson", branchChief: "T. Walsh", fundingSpec: "A. Jackson", units: 220, monthlyHAP: 165000, renewalOption: "Option 3b: Full Mark-to-Market", contractExpiration: daysFromNow(-15) },
@@ -86,705 +94,511 @@ const SAMPLE_CONTRACTS = [
   { id: 8, contractNum: "HAP-10412", fhaNum: "901-23456", propName: "Birch Valley Apartments", program: "Section 8", region: "Region 5 - Chicago", ae: "S. Patel", branchChief: "N. Okafor", fundingSpec: "C. Rivera", units: 144, monthlyHAP: 78500, renewalOption: "Option 2: At/Below Comparable", contractExpiration: daysFromNow(-5) },
 ];
 
-const DEMO_DATES = {
-  1: { "Date_AMPS_Log_Created": "2025-08-12", "Date_Rcvd_From_AE": "2025-08-14", "Date_Sent_To_Funding": "2025-08-18", "Date_Funding_Received_Package": "2025-08-19", "Date_Sent_Fund_Req": "2025-08-22", "Date_Fund_Rcvd_1": "2025-09-03", "Date_Contract_Prepared": "2025-09-05", "Date_Sent_OA_Sign": "2025-09-06" },
-  2: { "Date_AMPS_Log_Created": "2025-09-01", "Date_Rcvd_From_AE": "2025-09-03", "Date_Sent_To_Funding": "2025-09-06" },
-  3: { "Date_AMPS_Log_Created": "2025-07-15", "Date_Rcvd_From_AE": "2025-07-17", "Date_Sent_To_Funding": "2025-07-20", "Date_Funding_Received_Package": "2025-07-21", "Date_Sent_Fund_Req": "2025-07-24", "Date_Fund_Rcvd_1": "2025-08-05", "Date_Contract_Prepared": "2025-08-07", "Date_Sent_OA_Sign": "2025-08-08", "Date_Rcvd_OA_Sign": "2025-08-15", "Date_Sent_BC_Sign": "2025-08-16", "Date_Rcvd_BC_Sign": "2025-08-19", "Date_Sent_FW": "2025-08-20", "Date_FW_Complete": "2025-09-02", "Date_Systems_Updated": "2025-09-03", "Date_LOCCS_Complete": "2025-09-04", "Date_Contract_Executed": "2025-09-04" },
+const DATES_INIT = {
+  1: { Date_AMPS_Log_Created: "2025-08-12", Date_Rcvd_From_AE: "2025-08-14", Date_Sent_To_Funding: "2025-08-18", Date_Funding_Received_Package: "2025-08-19", Date_Sent_Fund_Req: "2025-08-22", Date_Fund_Rcvd_1: "2025-09-03", Date_Contract_Prepared: "2025-09-05", Date_Sent_OA_Sign: "2025-09-06" },
+  2: { Date_AMPS_Log_Created: "2025-09-01", Date_Rcvd_From_AE: "2025-09-03", Date_Sent_To_Funding: "2025-09-06" },
+  3: { Date_AMPS_Log_Created: "2025-07-15", Date_Rcvd_From_AE: "2025-07-17", Date_Sent_To_Funding: "2025-07-20", Date_Funding_Received_Package: "2025-07-21", Date_Sent_Fund_Req: "2025-07-24", Date_Fund_Rcvd_1: "2025-08-05", Date_Contract_Prepared: "2025-08-07", Date_Sent_OA_Sign: "2025-08-08", Date_Rcvd_OA_Sign: "2025-08-15", Date_Sent_BC_Sign: "2025-08-16", Date_Rcvd_BC_Sign: "2025-08-19", Date_Sent_FW: "2025-08-20", Date_FW_Complete: "2025-09-02", Date_Systems_Updated: "2025-09-03", Date_LOCCS_Complete: "2025-09-04", Date_Contract_Executed: "2025-09-04" },
   4: {},
-  5: { "Date_AMPS_Log_Created": "2025-10-01" },
-  6: { "Date_AMPS_Log_Created": "2025-10-10", "Date_Rcvd_From_AE": "2025-10-12" },
-  7: { "Date_AMPS_Log_Created": "2025-09-20", "Date_Rcvd_From_AE": "2025-09-22", "Date_Sent_To_Funding": "2025-09-25", "Date_Funding_Received_Package": "2025-09-26", "Date_Sent_Fund_Req": "2025-09-28" },
-  8: { "Date_AMPS_Log_Created": "2025-08-01" },
+  5: { Date_AMPS_Log_Created: "2025-10-01" },
+  6: { Date_AMPS_Log_Created: "2025-10-10", Date_Rcvd_From_AE: "2025-10-12" },
+  7: { Date_AMPS_Log_Created: "2025-09-20", Date_Rcvd_From_AE: "2025-09-22", Date_Sent_To_Funding: "2025-09-25", Date_Funding_Received_Package: "2025-09-26", Date_Sent_Fund_Req: "2025-09-28" },
+  8: { Date_AMPS_Log_Created: "2025-08-01" },
 };
 
-const DEMO_ATTACHMENTS = {
+const ATTACHMENTS_INIT = {
   "1-1.0": [{ name: "AMPS_Log_Entry_10042.pdf", size: "124 KB", date: "2025-08-12", addedBy: "J. Rivera (HPA)" }],
-  "1-1.1": [
-    { name: "Owner_Renewal_Package_SunriseManor.pdf", size: "2.4 MB", date: "2025-08-14", addedBy: "R. Williams (AE)" },
-    { name: "HUD-9624_SunriseManor.pdf", size: "340 KB", date: "2025-08-14", addedBy: "R. Williams (AE)" },
-    { name: "Rent_Roll_Aug2025.xlsx", size: "156 KB", date: "2025-08-14", addedBy: "R. Williams (AE)" },
-  ],
-  "1-1.4": [{ name: "Routing_Slip_HAP10042.pdf", size: "89 KB", date: "2025-08-18", addedBy: "R. Williams (AE)" }, { name: "Funding_Calculation_Sheet.xlsx", size: "67 KB", date: "2025-08-18", addedBy: "R. Williams (AE)" }],
-  "1-2.2": [{ name: "Funding_Request_FY2025_HAP10042.pdf", size: "210 KB", date: "2025-08-22", addedBy: "M. Torres (Funding)" }],
-  "1-2.3": [{ name: "HQ_Funding_Confirmation_HAP10042.pdf", size: "98 KB", date: "2025-09-03", addedBy: "HQ Funding Team" }],
-  "1-3.0": [{ name: "Contract_Draft_HAP10042_v1.pdf", size: "1.8 MB", date: "2025-09-06", addedBy: "M. Torres (Funding)" }],
-  "3-3.3": [{ name: "Signed_Contract_CedarHill_BC.pdf", size: "3.1 MB", date: "2025-08-19", addedBy: "T. Walsh (Branch Chief)" }],
-  "3-4.1": [{ name: "FW_Execution_Confirmation_HAP10115.pdf", size: "145 KB", date: "2025-09-02", addedBy: "Fort Worth ACC" }],
+  "1-1.1": [{ name: "Owner_Renewal_Package.pdf", size: "2.4 MB", date: "2025-08-14", addedBy: "R. Williams (AE)" }, { name: "HUD-9624.pdf", size: "340 KB", date: "2025-08-14", addedBy: "R. Williams (AE)" }, { name: "Rent_Roll_Aug2025.xlsx", size: "156 KB", date: "2025-08-14", addedBy: "R. Williams (AE)" }],
+  "1-1.4": [{ name: "Routing_Slip.pdf", size: "89 KB", date: "2025-08-18", addedBy: "R. Williams (AE)" }],
+  "1-2.2": [{ name: "Funding_Request_FY2025.pdf", size: "210 KB", date: "2025-08-22", addedBy: "M. Torres (Funding)" }],
+  "1-2.3": [{ name: "HQ_Funding_Confirmation.pdf", size: "98 KB", date: "2025-09-03", addedBy: "HQ Funding Team" }],
+  "1-3.0": [{ name: "Contract_Draft_v1.pdf", size: "1.8 MB", date: "2025-09-06", addedBy: "M. Torres (Funding)" }],
+  "3-3.3": [{ name: "Signed_Contract_CedarHill.pdf", size: "3.1 MB", date: "2025-08-19", addedBy: "T. Walsh (BC)" }],
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-function daysBetween(d1, d2) {
-  if (!d1 || !d2) return null;
-  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
-}
+function daysBetween(d1, d2) { if (!d1 || !d2) return null; return Math.round((new Date(d2) - new Date(d1)) / 86400000); }
 function todayStr() { return new Date().toISOString().split("T")[0]; }
-
 function getAutoStatus(dates) {
-  if (dates.Date_Contract_Executed) return { code: "06", label: "Complete", color: "#34d399" };
-  if (dates.Date_Sent_FW) return { code: "05", label: "In Final Processing", color: "#2dd4bf" };
-  if (dates.Date_Sent_OA_Sign) return { code: "04", label: "In Signature Process", color: "#a78bfa" };
-  if (dates.Date_Sent_Fund_Req) return { code: "03", label: "Awaiting Funding", color: "#f59e0b" };
-  if (dates.Date_Rcvd_From_AE) return { code: "02", label: "Documentation Received", color: "#60a5fa" };
-  if (dates.Date_Sent_Corrections || dates.Date_Sent_Corrections_to_OA) return { code: "90", label: "Pending Corrections", color: "#f87171" };
-  return { code: "01", label: "Not Started", color: "#94a3b8" };
+  if (dates.Date_Contract_Executed) return STATUS_CODES[5];
+  if (dates.Date_Sent_FW) return STATUS_CODES[4];
+  if (dates.Date_Sent_OA_Sign) return STATUS_CODES[3];
+  if (dates.Date_Sent_Fund_Req) return STATUS_CODES[2];
+  if (dates.Date_Rcvd_From_AE) return STATUS_CODES[1];
+  if (dates.Date_Sent_Corrections || dates.Date_Sent_Corrections_to_OA) return STATUS_CODES[6];
+  return STATUS_CODES[0];
 }
-
-function getExpirationAlert(expDate) {
-  const days = daysBetween(todayStr(), expDate);
-  if (days === null) return { level: "none", label: "No Date", color: "#94a3b8", bg: "#f8fafc" };
-  if (days < 0) return { level: "expired", label: `Expired (${Math.abs(days)}d ago)`, color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "🔴" };
-  if (days <= 30) return { level: "30", label: `${days}d remaining`, color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "🔴" };
-  if (days <= 60) return { level: "60", label: `${days}d remaining`, color: "#ea580c", bg: "#fff7ed", border: "#fed7aa", icon: "🟠" };
-  if (days <= 90) return { level: "90", label: `${days}d remaining`, color: "#d97706", bg: "#fffbeb", border: "#fde68a", icon: "🟡" };
-  if (days <= 120) return { level: "120", label: `${days}d remaining`, color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", icon: "🔵" };
-  return { level: "none", label: `${days}d remaining`, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", icon: "🟢" };
+function getExpirationAlert(exp) {
+  const d = daysBetween(todayStr(), exp);
+  if (d === null) return { level: "none", label: "No Date", color: "#94a3b8", bg: "#f8fafc", icon: "" };
+  if (d < 0) return { level: "expired", label: `Expired (${Math.abs(d)}d)`, color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "🔴" };
+  if (d <= 30) return { level: "30", label: `${d}d`, color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "🔴" };
+  if (d <= 60) return { level: "60", label: `${d}d`, color: "#ea580c", bg: "#fff7ed", border: "#fed7aa", icon: "🟠" };
+  if (d <= 90) return { level: "90", label: `${d}d`, color: "#d97706", bg: "#fffbeb", border: "#fde68a", icon: "🟡" };
+  if (d <= 120) return { level: "120", label: `${d}d`, color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", icon: "🔵" };
+  return { level: "none", label: `${d}d`, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", icon: "🟢" };
 }
-
 function fileIcon(name) {
   const ext = name.split(".").pop().toLowerCase();
-  if (ext === "pdf") return { icon: "📄", color: "#dc2626" };
-  if (["xlsx", "xls", "csv"].includes(ext)) return { icon: "📊", color: "#16a34a" };
-  if (["docx", "doc"].includes(ext)) return { icon: "📝", color: "#2563eb" };
-  if (["png", "jpg", "jpeg", "gif"].includes(ext)) return { icon: "🖼", color: "#9333ea" };
-  if (["msg", "eml"].includes(ext)) return { icon: "✉", color: "#d97706" };
-  return { icon: "📎", color: "#64748b" };
+  if (ext === "pdf") return "📄"; if (["xlsx","xls","csv"].includes(ext)) return "📊"; if (["docx","doc"].includes(ext)) return "📝"; return "📎";
 }
 
-// ── Components ───────────────────────────────────────────────────────────
-const StatusBadge = ({ status }) => (
-  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: status.color + "22", color: status.color, border: `1px solid ${status.color}44` }}>
-    <span style={{ width: 8, height: 8, borderRadius: "50%", background: status.color, boxShadow: `0 0 6px ${status.color}66` }} />
-    {status.label}
-  </span>
-);
+// ── Small Components ─────────────────────────────────────────────────────
+const Pill = ({ children, color, bg }) => (<span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: bg || color + "22", color, border: `1px solid ${color}44` }}>{children}</span>);
+const StatusBadge = ({ status }) => (<Pill color={status.color}><span style={{ width: 7, height: 7, borderRadius: "50%", background: status.color }} />{status.label}</Pill>);
+const RoleBadge = ({ roleKey }) => { const r = ROLES[roleKey]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: r.bg, color: r.color, border: `1px solid ${r.color}33` }}>{r.icon} {r.short}</span>; };
+const Metric = ({ label, value, sub, accent }) => (<div style={{ padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid #e2e8f0", flex: 1, minWidth: 130 }}><div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 5 }}>{label}</div><div style={{ fontSize: 26, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1.1 }}>{value}</div>{sub && <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>{sub}</div>}</div>);
+const Bar = ({ pct, color }) => (<div style={{ height: 5, borderRadius: 3, background: "#e2e8f0", width: "100%" }}><div style={{ height: 5, borderRadius: 3, background: color, width: `${Math.min(pct, 100)}%`, transition: "width 0.4s" }} /></div>);
+const Sel = (props) => (<select {...props} style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #cbd5e1", fontSize: 11, background: "#fff", outline: "none", fontWeight: 500, cursor: "pointer", ...props.style }}>{props.children}</select>);
 
-const AlertBadge = ({ alert }) => (
-  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: alert.bg, color: alert.color, border: `1px solid ${alert.border || alert.color + "33"}` }}>
-    {alert.icon} {alert.label}
-  </span>
-);
-
-const RoleBadge = ({ roleKey, size = "sm" }) => {
-  const r = ROLES[roleKey];
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: size === "lg" ? "4px 10px" : "2px 8px", borderRadius: 5, fontSize: size === "lg" ? 12 : 10, fontWeight: 700, letterSpacing: 0.3, background: r.bg, color: r.color, border: `1px solid ${r.color}33` }}>
-      <span style={{ fontSize: size === "lg" ? 13 : 11 }}>{r.icon}</span> {r.short}
-    </span>
-  );
-};
-
-const SelectStyle = { padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 11, background: "#fff", outline: "none", color: "#1e293b", fontWeight: 500, cursor: "pointer" };
-
-// ── Main App ─────────────────────────────────────────────────────────────
-export default function ApprovalFlow() {
-  // Filters
+// ══════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════════════════════════════════════
+export default function App() {
+  // ── Navigation & filters ──
+  const [view, setView] = useState("dashboard");
   const [filterProgram, setFilterProgram] = useState("All");
   const [filterAlert, setFilterAlert] = useState("All");
+  const [filterRegion, setFilterRegion] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // ── Approval flow state ──
   const [selectedContractId, setSelectedContractId] = useState(1);
-
-  // Acting As (role override)
   const [actingAs, setActingAs] = useState("self");
-
-  // Phase collapse — phases beyond the current step default to collapsed
-  const [collapsedPhases, setCollapsedPhases] = useState({});
-
-  // Data state
-  const [contractDates, setContractDates] = useState(() => {
-    const init = {};
-    SAMPLE_CONTRACTS.forEach(c => { init[c.id] = { ...(DEMO_DATES[c.id] || {}) }; });
-    return init;
-  });
-  const [attachments, setAttachments] = useState(DEMO_ATTACHMENTS);
+  const [contractDates, setContractDates] = useState(() => { const o = {}; CONTRACTS_INIT.forEach(c => o[c.id] = { ...(DATES_INIT[c.id] || {}) }); return o; });
+  const [attachments, setAttachments] = useState(ATTACHMENTS_INIT);
   const [notes, setNotes] = useState({});
   const [expandedStep, setExpandedStep] = useState(null);
-  const [viewMode, setViewMode] = useState("flow");
+  const [collapsedPhases, setCollapsedPhases] = useState({});
   const [showProgramNotes, setShowProgramNotes] = useState(true);
   const [forwardConfirm, setForwardConfirm] = useState(null);
   const [activityLog, setActivityLog] = useState([
-    { time: "2025-09-06 10:32", action: "Contract sent to Owner/Agent for signature", user: "M. Torres (Funding)", contract: "HAP-10042", stepId: "3.0" },
-    { time: "2025-09-05 14:15", action: "Contract document prepared", user: "M. Torres (Funding)", contract: "HAP-10042", stepId: "2.4" },
-    { time: "2025-09-03 09:45", action: "HQ confirmed funding", user: "HQ Funding Team", contract: "HAP-10042", stepId: "2.3" },
+    { time: "2025-09-06 10:32", action: "Sent contract to OA for signature", user: "M. Torres (Funding)", contract: "HAP-10042" },
+    { time: "2025-09-03 09:45", action: "HQ confirmed funding", user: "HQ Funding Team", contract: "HAP-10042" },
   ]);
   const fileInputRef = useRef(null);
   const [uploadTarget, setUploadTarget] = useState(null);
 
-  // Filtered contracts
-  const filteredContracts = useMemo(() => {
-    return SAMPLE_CONTRACTS.filter(c => {
-      if (filterProgram !== "All" && c.program !== filterProgram) return false;
-      if (filterAlert !== "All") {
-        const alert = getExpirationAlert(c.contractExpiration);
-        if (filterAlert === "expired" && alert.level !== "expired") return false;
-        if (filterAlert === "30" && !(alert.level === "expired" || alert.level === "30")) return false;
-        if (filterAlert === "60" && !(alert.level === "expired" || alert.level === "30" || alert.level === "60")) return false;
-        if (filterAlert === "90" && !(alert.level === "expired" || alert.level === "30" || alert.level === "60" || alert.level === "90")) return false;
-        if (filterAlert === "120" && alert.level === "none") return false;
-        if (filterAlert === "none" && alert.level !== "none") return false;
-      }
-      return true;
-    });
-  }, [filterProgram, filterAlert]);
+  // ── Derived data ──
+  const allContracts = useMemo(() => CONTRACTS_INIT.map(c => {
+    const d = contractDates[c.id] || {};
+    return { ...c, dates: d, status: getAutoStatus(d), alert: getExpirationAlert(c.contractExpiration) };
+  }), [contractDates]);
 
-  // Make sure selected contract is in the filtered list
-  const contract = SAMPLE_CONTRACTS.find(c => c.id === selectedContractId);
+  const filtered = useMemo(() => allContracts.filter(c => {
+    if (filterProgram !== "All" && c.program !== filterProgram) return false;
+    if (filterRegion !== "All" && c.region !== filterRegion) return false;
+    if (filterAlert !== "All") {
+      const a = c.alert;
+      if (filterAlert === "expired" && a.level !== "expired") return false;
+      if (filterAlert === "30" && !["expired","30"].includes(a.level)) return false;
+      if (filterAlert === "60" && !["expired","30","60"].includes(a.level)) return false;
+      if (filterAlert === "90" && !["expired","30","60","90"].includes(a.level)) return false;
+      if (filterAlert === "120" && a.level === "none") return false;
+      if (filterAlert === "none" && a.level !== "none") return false;
+    }
+    if (searchTerm) { const s = searchTerm.toLowerCase(); if (![c.contractNum, c.propName, c.fhaNum, c.ae].some(f => f.toLowerCase().includes(s))) return false; }
+    return true;
+  }), [allContracts, filterProgram, filterRegion, filterAlert, searchTerm]);
+
+  const contract = allContracts.find(c => c.id === selectedContractId);
   const dates = contractDates[selectedContractId] || {};
-  const status = getAutoStatus(dates);
-  const expAlert = contract ? getExpirationAlert(contract.contractExpiration) : { level: "none", label: "", color: "#94a3b8" };
-
   const actingStaff = STAFF.find(s => s.id === actingAs);
   const actingLabel = actingAs === "self" ? "Current User" : `${actingStaff.name} (${actingStaff.role}) — acting on behalf`;
 
-  const setDate = (field, value) => {
-    setContractDates(prev => ({ ...prev, [selectedContractId]: { ...prev[selectedContractId], [field]: value } }));
-  };
-  const clearDate = (field) => {
-    setContractDates(prev => {
-      const updated = { ...prev[selectedContractId] };
-      delete updated[field];
-      return { ...prev, [selectedContractId]: updated };
-    });
-  };
-  const getAttachmentKey = (stepId) => `${selectedContractId}-${stepId}`;
-  const getStepAttachments = (stepId) => attachments[getAttachmentKey(stepId)] || [];
-  const addAttachment = (stepId, files) => {
-    const key = getAttachmentKey(stepId);
-    const newFiles = Array.from(files).map(f => ({
-      name: f.name,
-      size: f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(f.size / 1024)} KB`,
-      date: todayStr(),
-      addedBy: actingLabel,
-    }));
-    setAttachments(prev => ({ ...prev, [key]: [...(prev[key] || []), ...newFiles] }));
-  };
-  const removeAttachment = (stepId, idx) => {
-    const key = getAttachmentKey(stepId);
-    setAttachments(prev => ({ ...prev, [key]: (prev[key] || []).filter((_, i) => i !== idx) }));
-  };
+  // ── Metrics ──
+  const metrics = useMemo(() => {
+    const byStatus = {}; STATUS_CODES.forEach(s => byStatus[s.code] = 0);
+    allContracts.forEach(c => byStatus[c.status.code]++);
+    const completed = allContracts.filter(c => c.status.code === "06");
+    const cycleTimes = completed.map(c => daysBetween(c.dates.Date_Rcvd_From_AE, c.dates.Date_Contract_Executed)).filter(Boolean);
+    const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    const fundT = allContracts.filter(c => c.dates.Date_Sent_Fund_Req && c.dates.Date_Fund_Rcvd_1).map(c => daysBetween(c.dates.Date_Sent_Fund_Req, c.dates.Date_Fund_Rcvd_1));
+    const oaT = allContracts.filter(c => c.dates.Date_Sent_OA_Sign && c.dates.Date_Rcvd_OA_Sign).map(c => daysBetween(c.dates.Date_Sent_OA_Sign, c.dates.Date_Rcvd_OA_Sign));
+    const fwT = allContracts.filter(c => c.dates.Date_Sent_FW && c.dates.Date_FW_Complete).map(c => daysBetween(c.dates.Date_Sent_FW, c.dates.Date_FW_Complete));
+    const bcT = allContracts.filter(c => c.dates.Date_Sent_BC_Sign && c.dates.Date_Rcvd_BC_Sign).map(c => daysBetween(c.dates.Date_Sent_BC_Sign, c.dates.Date_Rcvd_BC_Sign));
+    return { byStatus, total: allContracts.length, completed: completed.length, avgCycle: avg(cycleTimes), avgFund: avg(fundT), avgOA: avg(oaT), avgFW: avg(fwT), avgBC: avg(bcT) };
+  }, [allContracts]);
 
-  const handleForward = (step, targetStepId) => {
-    if (step.dateField && !dates[step.dateField]) setDate(step.dateField, todayStr());
-    const targetStep = WORKFLOW_STEPS.find(s => s.id === targetStepId);
-    const targetRole = targetStep ? ROLES[targetStep.role] : null;
-    setActivityLog(prev => [{
-      time: new Date().toISOString().replace("T", " ").slice(0, 16),
-      action: `${step.forwardLabel || "Forwarded"} → ${targetRole ? targetRole.label : targetStepId}`,
-      user: actingLabel,
-      contract: contract.contractNum,
-      stepId: step.id,
-    }, ...prev]);
-    setExpandedStep(targetStepId);
-    setForwardConfirm(null);
-  };
+  const regionMetrics = useMemo(() => {
+    const rm = {}; REGIONS.forEach(r => rm[r] = { total: 0, complete: 0, awaiting: 0, corrections: 0, cycles: [] });
+    allContracts.forEach(c => { const r = rm[c.region]; if (!r) return; r.total++; if (c.status.code === "06") { r.complete++; const ct = daysBetween(c.dates.Date_Rcvd_From_AE, c.dates.Date_Contract_Executed); if (ct) r.cycles.push(ct); } if (c.status.code === "03") r.awaiting++; if (c.status.code === "90") r.corrections++; });
+    return Object.entries(rm).map(([reg, d]) => ({ region: reg.split(" - ")[1], regionFull: reg, ...d, avgCycle: d.cycles.length ? Math.round(d.cycles.reduce((a, b) => a + b, 0) / d.cycles.length) : null, pct: d.total ? Math.round((d.complete / d.total) * 100) : 0 }));
+  }, [allContracts]);
+
+  // ── Approval flow helpers ──
+  const setDate = (f, v) => setContractDates(p => ({ ...p, [selectedContractId]: { ...p[selectedContractId], [f]: v } }));
+  const clearDate = (f) => setContractDates(p => { const u = { ...p[selectedContractId] }; delete u[f]; return { ...p, [selectedContractId]: u }; });
+  const getAtt = (sid) => attachments[`${selectedContractId}-${sid}`] || [];
+  const selectContract = (id) => { setSelectedContractId(id); setExpandedStep(null); setCollapsedPhases({}); };
+
+  const currentPhaseId = useMemo(() => {
+    const s = getAutoStatus(dates);
+    if (s.code === "06" || s.code === "05") return 4;
+    if (s.code === "04") return 3;
+    if (s.code === "03") return 2;
+    return 1;
+  }, [dates]);
+  const isPhaseCollapsed = (pid) => collapsedPhases[pid] !== undefined ? collapsedPhases[pid] : pid !== currentPhaseId;
+  const togglePhase = (pid) => setCollapsedPhases(p => ({ ...p, [pid]: !isPhaseCollapsed(pid) }));
 
   const getStepStatus = (step) => {
-    if (!step.dateField) {
-      const nextStep = WORKFLOW_STEPS[WORKFLOW_STEPS.indexOf(step) + 1];
-      return nextStep?.dateField && dates[nextStep.dateField] ? "complete" : "pending";
-    }
+    if (!step.dateField) { const nx = WORKFLOW_STEPS[WORKFLOW_STEPS.indexOf(step) + 1]; return nx?.dateField && dates[nx.dateField] ? "complete" : "pending"; }
     if (dates[step.dateField]) return "complete";
-    const idx = WORKFLOW_STEPS.indexOf(step);
-    const prevSteps = WORKFLOW_STEPS.slice(0, idx).filter(s => s.dateField && s.required);
-    const allPrevDone = prevSteps.every(s => dates[s.dateField]);
-    if (allPrevDone && !step.isOptional && !step.isCorrection) return "current";
+    const prev = WORKFLOW_STEPS.slice(0, WORKFLOW_STEPS.indexOf(step)).filter(s => s.dateField && s.required);
+    if (prev.every(s => dates[s.dateField]) && !step.isOptional && !step.isCorrection) return "current";
     return "pending";
   };
 
-  const phaseProgress = PHASES.map(p => {
-    const phaseSteps = WORKFLOW_STEPS.filter(s => s.phase === p.id && s.dateField && !s.isOptional && !s.isCorrection);
-    const done = phaseSteps.filter(s => dates[s.dateField]).length;
-    return { ...p, done, total: phaseSteps.length, pct: phaseSteps.length ? Math.round((done / phaseSteps.length) * 100) : 0 };
-  });
-
-  // Determine which phase contains the current active work based on contract status
-  const currentPhaseId = useMemo(() => {
-    const s = getAutoStatus(dates);
-    // Map status codes to their active phase
-    if (s.code === "06") return 4; // Complete — show final phase
-    if (s.code === "05") return 4; // In Final Processing
-    if (s.code === "04") return 3; // In Signature Process
-    if (s.code === "03") return 2; // Awaiting Funding
-    if (s.code === "02") return 1; // Documentation Received
-    if (s.code === "90") return 1; // Pending Corrections — back in early phase
-    return 1; // Not Started
-  }, [dates]);
-
-  // Phase is collapsed if: (a) user explicitly toggled it, or (b) it defaults to collapsed (any phase that isn't the current one)
-  const isPhaseCollapsed = (phaseId) => {
-    if (collapsedPhases[phaseId] !== undefined) return collapsedPhases[phaseId];
-    // Default: only the current phase is expanded; completed and future phases collapse
-    return phaseId !== currentPhaseId;
+  const handleForward = (step, target) => {
+    if (step.dateField && !dates[step.dateField]) setDate(step.dateField, todayStr());
+    const tgt = WORKFLOW_STEPS.find(s => s.id === target);
+    setActivityLog(p => [{ time: new Date().toISOString().replace("T", " ").slice(0, 16), action: `${step.forwardLabel} → ${tgt ? ROLES[tgt.role].label : target}`, user: actingLabel, contract: contract.contractNum }, ...p]);
+    setExpandedStep(target);
+    setForwardConfirm(null);
   };
 
-  const togglePhase = (phaseId) => {
-    setCollapsedPhases(prev => ({ ...prev, [phaseId]: !isPhaseCollapsed(phaseId) }));
-  };
-
-  // Reset collapsed state when switching contracts
-  const selectContract = (id) => {
-    setSelectedContractId(id);
-    setExpandedStep(null);
-    setCollapsedPhases({});
-  };
-
-  const handleFileInputChange = (e) => {
-    if (uploadTarget && e.target.files.length) addAttachment(uploadTarget, e.target.files);
+  const handleFileInput = (e) => {
+    if (uploadTarget && e.target.files.length) {
+      const key = `${selectedContractId}-${uploadTarget}`;
+      const newF = Array.from(e.target.files).map(f => ({ name: f.name, size: f.size > 1048576 ? `${(f.size / 1048576).toFixed(1)} MB` : `${Math.round(f.size / 1024)} KB`, date: todayStr(), addedBy: actingLabel }));
+      setAttachments(p => ({ ...p, [key]: [...(p[key] || []), ...newF] }));
+    }
     setUploadTarget(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ══════════════════════════════════════════════════════════════════════════
+  const NAV = [
+    { id: "dashboard", label: "Dashboard", icon: "◉" },
+    { id: "contracts", label: "Contracts", icon: "☰" },
+    { id: "workflow", label: "Approval Flow", icon: "▸" },
+    { id: "turnaround", label: "Turnaround", icon: "⏱" },
+    { id: "regional", label: "Regional", icon: "◫" },
+    { id: "activity", label: "Activity", icon: "↻" },
+  ];
+
   return (
     <div style={{ fontFamily: "'Segoe UI', -apple-system, sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
-      <input type="file" ref={fileInputRef} style={{ display: "none" }} multiple onChange={handleFileInputChange} />
+      <input type="file" ref={fileInputRef} style={{ display: "none" }} multiple onChange={handleFileInput} />
 
-      {/* ── Prototype Banner ── */}
-      <div style={{ background: "#fef2f2", borderBottom: "2px solid #fecaca", padding: "6px 24px", textAlign: "center" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: 0.3 }}>
-          PROTOTYPE — Contract Funding Approval Flow &middot; HUD Multifamily Housing &middot; Attachments, routing &amp; delegation are simulated for demo
-        </span>
+      {/* Prototype Banner */}
+      <div style={{ background: "#fef2f2", borderBottom: "2px solid #fecaca", padding: "5px 24px", textAlign: "center" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: 0.3 }}>PROTOTYPE — Contract Funding Approval Flow &middot; HUD Multifamily Housing &middot; Attachments, routing &amp; delegation are simulated for demo</span>
       </div>
 
-      {/* ── Header ── */}
-      <div style={{ background: "linear-gradient(135deg, #0c2d6b 0%, #1e40af 50%, #1d4ed8 100%)", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }}>H</div>
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg, #0c2d6b 0%, #1e40af 50%, #1d4ed8 100%)", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>H</div>
           <div>
-            <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>Contract Funding Approval Flow</div>
-            <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 10 }}>HUD Multifamily Housing &middot; Process Routing, Attachments &amp; Date Entry</div>
+            <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>Funding Workflow Tracker</div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10 }}>HUD Multifamily Housing</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: 3 }}>
-          {[{ id: "flow", label: "Approval Flow" }, { id: "activity", label: "Activity Log" }, { id: "summary", label: "Summary" }].map(v => (
-            <button key={v.id} onClick={() => setViewMode(v.id)}
-              style={{ padding: "5px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, background: viewMode === v.id ? "rgba(255,255,255,0.95)" : "transparent", color: viewMode === v.id ? "#1e40af" : "rgba(255,255,255,0.7)" }}>{v.label}</button>
+        <div style={{ display: "flex", gap: 1, background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: 2 }}>
+          {NAV.map(n => (
+            <button key={n.id} onClick={() => setView(n.id)}
+              style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 600, background: view === n.id ? "rgba(255,255,255,0.95)" : "transparent", color: view === n.id ? "#1e40af" : "rgba(255,255,255,0.65)" }}>
+              {n.icon} {n.label}
+            </button>
           ))}
         </div>
       </div>
 
-      <div style={{ padding: "14px 24px", maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ padding: "14px 24px", maxWidth: 1300, margin: "0 auto" }}>
 
-        {/* ══════════════════════════════════════════════════════════════════════
-            FILTER BAR
-           ══════════════════════════════════════════════════════════════════════ */}
-        <div style={{ background: "linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%)", borderRadius: 12, border: "1px solid #bfdbfe", padding: "10px 16px", marginBottom: 12, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-
-          {/* Program Filter */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: 0.5 }}>Program</span>
-            <select value={filterProgram} onChange={e => { setFilterProgram(e.target.value); const f = SAMPLE_CONTRACTS.filter(c => e.target.value === "All" || c.program === e.target.value); const keep = f.find(c => c.id === selectedContractId); if (!keep && f[0]) selectContract(f[0].id); }} style={SelectStyle}>
-              <option value="All">All Programs</option>
-              <option value="Section 8">Section 8</option>
-              <option value="PRAC">PRAC</option>
-            </select>
+        {/* ═══════════════════════════════════════════════════════════════════
+            DASHBOARD
+           ═══════════════════════════════════════════════════════════════════ */}
+        {view === "dashboard" && (<div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            <Metric label="Total Contracts" value={metrics.total} sub="All regions" />
+            <Metric label="Avg Cycle Time" value={`${metrics.avgCycle}d`} sub="Target: 60d" accent={metrics.avgCycle > 60 ? "#ef4444" : "#1e40af"} />
+            <Metric label="Awaiting Funding" value={metrics.byStatus["03"]} sub="Pending HQ" accent="#f59e0b" />
+            <Metric label="In Signature" value={metrics.byStatus["04"]} sub="OA or BC" accent="#a78bfa" />
+            <Metric label="Corrections" value={metrics.byStatus["90"]} sub="Returned" accent="#f87171" />
+            <Metric label="Completed" value={metrics.completed} sub={`${Math.round(metrics.completed / metrics.total * 100)}%`} accent="#34d399" />
           </div>
-
-          {/* Contract Alert Filter */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: 0.5 }}>Alert</span>
-            <select value={filterAlert} onChange={e => setFilterAlert(e.target.value)} style={SelectStyle}>
-              <option value="All">All Contracts</option>
-              <option value="expired">🔴 Expired</option>
-              <option value="30">🔴 Due ≤ 30 days</option>
-              <option value="60">🟠 Due ≤ 60 days</option>
-              <option value="90">🟡 Due ≤ 90 days</option>
-              <option value="120">🔵 Due ≤ 120 days</option>
-              <option value="none">🟢 No Alert (&gt;120 days)</option>
-            </select>
-          </div>
-
-          {/* Contract Dropdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: 0.5 }}>Contract</span>
-            <select value={selectedContractId} onChange={e => { selectContract(Number(e.target.value)); }}
-              style={{ ...SelectStyle, minWidth: 260 }}>
-              {filteredContracts.map(c => {
-                const a = getExpirationAlert(c.contractExpiration);
-                const s = getAutoStatus(contractDates[c.id] || {});
-                return <option key={c.id} value={c.id}>{c.contractNum} — {c.propName} [{c.program}] {a.icon || ""}</option>;
+          {/* Pipeline */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>Funding Request Pipeline</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {STATUS_CODES.filter(s => s.code !== "99").map(s => {
+                const ct = metrics.byStatus[s.code]; const pct = Math.round((ct / metrics.total) * 100);
+                return (<div key={s.code} onClick={() => { setView("contracts"); }} style={{ flex: `${Math.max(pct, 8)} 0 0`, minWidth: 90, padding: "10px 12px", borderRadius: 10, background: s.color + "12", border: `1px solid ${s.color}33`, cursor: "pointer" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{ct}</div>
+                  <div style={{ fontSize: 10, color: s.color, fontWeight: 600 }}>{s.label}</div>
+                  <div style={{ fontSize: 9, color: "#94a3b8" }}>{pct}%</div>
+                </div>);
               })}
-              {filteredContracts.length === 0 && <option disabled>No contracts match filters</option>}
-            </select>
-          </div>
-
-          <div style={{ width: 1, height: 28, background: "#93c5fd" }} />
-
-          {/* Acting As Override */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: 0.5 }}>Acting As</span>
-            <select value={actingAs} onChange={e => setActingAs(e.target.value)}
-              style={{ ...SelectStyle, minWidth: 200, borderColor: actingAs !== "self" ? "#f59e0b" : "#e2e8f0", background: actingAs !== "self" ? "#fffbeb" : "#fff" }}>
-              <option value="self">— My Actions —</option>
-              <optgroup label="Branch Chiefs">
-                {STAFF.filter(s => s.role === "Branch Chief").map(s => <option key={s.id} value={s.id}>{s.name} — {s.role} ({s.region})</option>)}
-              </optgroup>
-              <optgroup label="Account Executives">
-                {STAFF.filter(s => s.role === "Account Executive").map(s => <option key={s.id} value={s.id}>{s.name} — {s.role} ({s.region})</option>)}
-              </optgroup>
-              <optgroup label="Funding Specialists">
-                {STAFF.filter(s => s.role === "Funding Specialist").map(s => <option key={s.id} value={s.id}>{s.name} — {s.role} ({s.region})</option>)}
-              </optgroup>
-              <optgroup label="HPAs">
-                {STAFF.filter(s => s.role === "HPA").map(s => <option key={s.id} value={s.id}>{s.name} — {s.role} ({s.region})</option>)}
-              </optgroup>
-            </select>
-          </div>
-
-          {/* Acting As indicator */}
-          {actingAs !== "self" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "#fef3c7", border: "1px solid #fde68a", fontSize: 10, color: "#92400e", fontWeight: 600 }}>
-              ⚠ Acting on behalf of {actingStaff.name}
-              <button onClick={() => setActingAs("self")} style={{ border: "none", background: "none", color: "#92400e", cursor: "pointer", fontWeight: 800, fontSize: 12 }}>✕</button>
             </div>
-          )}
-
-          <label style={{ marginLeft: "auto", fontSize: 10, color: "#1e40af", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
-            <input type="checkbox" checked={showProgramNotes} onChange={e => setShowProgramNotes(e.target.checked)} />
-            Program notes
-          </label>
-        </div>
-
-        {/* ── Contract Header Card ── */}
-        {contract && (
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "14px 20px", marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{contract.contractNum} — {contract.propName}</div>
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-                  {contract.fhaNum} &middot; {contract.region} &middot; {contract.units} units &middot; ${contract.monthlyHAP.toLocaleString()}/mo &middot; {contract.renewalOption}
-                </div>
-                <div style={{ fontSize: 11, color: "#475569", marginTop: 4, display: "flex", gap: 14, flexWrap: "wrap" }}>
-                  <span>👤 AE: <strong>{contract.ae}</strong></span>
-                  <span>✍ BC: <strong>{contract.branchChief}</strong></span>
-                  <span>💰 Funding: <strong>{contract.fundingSpec}</strong></span>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 6, background: contract.program === "Section 8" ? "#eff6ff" : "#f5f3ff", color: contract.program === "Section 8" ? "#1e40af" : "#7c3aed", fontWeight: 700, border: `1px solid ${contract.program === "Section 8" ? "#bfdbfe" : "#ddd6fe"}` }}>
-                    {contract.program}
-                  </span>
-                  <StatusBadge status={status} />
-                </div>
-                <AlertBadge alert={expAlert} />
-              </div>
-            </div>
-            {/* Phase progress */}
-            <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-              {phaseProgress.map(p => (
-                <div key={p.id} style={{ flex: 1 }}>
+          </div>
+          {/* Two Column */}
+          <div style={{ display: "flex", gap: 14, marginBottom: 16, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 320, background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>Avg Turnaround by Stage</div>
+              {[{ label: "HQ Funding", days: metrics.avgFund, target: 10, color: "#f59e0b" }, { label: "Owner Signature", days: metrics.avgOA, target: 10, color: "#a78bfa" }, { label: "Branch Chief", days: metrics.avgBC, target: 5, color: "#60a5fa" }, { label: "Fort Worth", days: metrics.avgFW, target: 10, color: "#2dd4bf" }, { label: "End-to-End", days: metrics.avgCycle, target: 60, color: "#1e40af" }].map((item, i) => (
+                <div key={i} style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: p.color, textTransform: "uppercase", letterSpacing: 0.5 }}>Phase {p.id}</span>
-                    <span style={{ fontSize: 9, color: "#94a3b8" }}>{p.done}/{p.total}</span>
+                    <span style={{ fontSize: 11, color: "#475569" }}>{item.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: item.days > item.target ? "#ef4444" : "#16a34a" }}>{item.days}d {item.days > item.target ? "⚠" : "✓"}</span>
                   </div>
-                  <div style={{ height: 5, borderRadius: 3, background: "#e2e8f0" }}>
-                    <div style={{ height: 5, borderRadius: 3, background: p.color, width: `${p.pct}%`, transition: "width 0.4s" }} />
+                  <Bar pct={(item.days / item.target) * 100} color={item.days > item.target ? "#ef4444" : item.color} />
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, minWidth: 320, background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>⚠ Needs Attention</div>
+              <div style={{ display: "grid", gap: 4 }}>
+                {allContracts.filter(c => ["90", "03"].includes(c.status.code) || c.alert.level === "expired" || c.alert.level === "30").slice(0, 6).map(c => (
+                  <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderRadius: 8, background: "#fafbfc", border: "1px solid #f1f5f9", cursor: "pointer", fontSize: 11 }}>
+                    <div><span style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</span> <span style={{ color: "#94a3b8", marginLeft: 6 }}>{c.propName}</span></div>
+                    <StatusBadge status={c.status} />
                   </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            CONTRACTS LIST
+           ═══════════════════════════════════════════════════════════════════ */}
+        {view === "contracts" && (<div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "10px 14px" }}>
+            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search contract, property, AE..." style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 11, width: 220, outline: "none" }} />
+            <Sel value={filterProgram} onChange={e => setFilterProgram(e.target.value)}><option value="All">All Programs</option>{PROGRAMS.map(p => <option key={p}>{p}</option>)}</Sel>
+            <Sel value={filterRegion} onChange={e => setFilterRegion(e.target.value)}><option value="All">All Regions</option>{REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</Sel>
+            <Sel value={filterAlert} onChange={e => setFilterAlert(e.target.value)}><option value="All">All Alerts</option><option value="expired">🔴 Expired</option><option value="30">🔴 ≤30d</option><option value="60">🟠 ≤60d</option><option value="90">🟡 ≤90d</option><option value="120">🔵 ≤120d</option><option value="none">🟢 &gt;120d</option></Sel>
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}><strong>{filtered.length}</strong> of {metrics.total}</span>
+          </div>
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
+              <div>Contract</div><div>Property</div><div>Program</div><div>Region</div><div>AE</div><div>Alert</div><div>Status</div>
+            </div>
+            <div style={{ maxHeight: 480, overflowY: "auto" }}>
+              {filtered.map(c => (
+                <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }}
+                  style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, cursor: "pointer", alignItems: "center" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <div style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</div>
+                  <div style={{ color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.propName}</div>
+                  <div style={{ color: "#64748b" }}>{c.program}</div>
+                  <div style={{ color: "#64748b" }}>{c.region.split(" - ")[1]}</div>
+                  <div style={{ color: "#64748b" }}>{c.ae}</div>
+                  <div><span style={{ fontSize: 10, color: c.alert.color, fontWeight: 600 }}>{c.alert.icon} {c.alert.label}</span></div>
+                  <StatusBadge status={c.status} />
                 </div>
               ))}
             </div>
           </div>
-        )}
+        </div>)}
 
-        {/* ═══ APPROVAL FLOW VIEW ═══ */}
-        {viewMode === "flow" && contract && (
-          <div style={{ marginLeft: 16, paddingLeft: 16, borderLeft: "3px solid #bfdbfe" }}>
+        {/* ═══════════════════════════════════════════════════════════════════
+            APPROVAL FLOW
+           ═══════════════════════════════════════════════════════════════════ */}
+        {view === "workflow" && (<div>
+          {/* Workflow filter bar */}
+          <div style={{ background: "linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%)", borderRadius: 12, border: "1px solid #bfdbfe", padding: "9px 14px", marginBottom: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <Sel value={filterProgram} onChange={e => setFilterProgram(e.target.value)} style={{ borderColor: "#93c5fd" }}><option value="All">All Programs</option>{PROGRAMS.map(p => <option key={p}>{p}</option>)}</Sel>
+            <Sel value={filterAlert} onChange={e => setFilterAlert(e.target.value)} style={{ borderColor: "#93c5fd" }}><option value="All">All Alerts</option><option value="expired">🔴 Expired</option><option value="30">🔴 ≤30d</option><option value="60">🟠 ≤60d</option><option value="90">🟡 ≤90d</option><option value="120">🔵 ≤120d</option><option value="none">🟢 &gt;120d</option></Sel>
+            <Sel value={selectedContractId} onChange={e => selectContract(Number(e.target.value))} style={{ minWidth: 250, borderColor: "#93c5fd" }}>
+              {filtered.map(c => <option key={c.id} value={c.id}>{c.contractNum} — {c.propName} [{c.program}] {c.alert.icon}</option>)}
+              {filtered.length === 0 && <option disabled>No matches</option>}
+            </Sel>
+            <div style={{ width: 1, height: 24, background: "#93c5fd" }} />
+            <Sel value={actingAs} onChange={e => setActingAs(e.target.value)} style={{ minWidth: 190, borderColor: actingAs !== "self" ? "#f59e0b" : "#93c5fd", background: actingAs !== "self" ? "#fffbeb" : "#fff" }}>
+              <option value="self">— My Actions —</option>
+              <optgroup label="Branch Chiefs">{STAFF.filter(s => s.role === "Branch Chief").map(s => <option key={s.id} value={s.id}>{s.name} — BC ({s.region})</option>)}</optgroup>
+              <optgroup label="Account Executives">{STAFF.filter(s => s.role === "Account Executive").map(s => <option key={s.id} value={s.id}>{s.name} — AE ({s.region})</option>)}</optgroup>
+              <optgroup label="Funding Specialists">{STAFF.filter(s => s.role === "Funding Specialist").map(s => <option key={s.id} value={s.id}>{s.name} — Fund ({s.region})</option>)}</optgroup>
+            </Sel>
+            {actingAs !== "self" && <span style={{ fontSize: 10, color: "#92400e", fontWeight: 600, background: "#fef3c7", padding: "3px 8px", borderRadius: 6 }}>⚠ Acting as {actingStaff.name} <button onClick={() => setActingAs("self")} style={{ border: "none", background: "none", color: "#92400e", cursor: "pointer", fontWeight: 800 }}>✕</button></span>}
+            <label style={{ marginLeft: "auto", fontSize: 10, color: "#1e40af", display: "flex", alignItems: "center", gap: 3, cursor: "pointer" }}><input type="checkbox" checked={showProgramNotes} onChange={e => setShowProgramNotes(e.target.checked)} /> Program notes</label>
+          </div>
+
+          {/* Contract card */}
+          {contract && (<>
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "12px 18px", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 6 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>{contract.contractNum} — {contract.propName}</div>
+                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{contract.fhaNum} &middot; {contract.region} &middot; {contract.units} units &middot; ${contract.monthlyHAP.toLocaleString()}/mo</div>
+                <div style={{ fontSize: 10, color: "#475569", marginTop: 3 }}>👤 AE: <strong>{contract.ae}</strong> &nbsp; ✍ BC: <strong>{contract.branchChief}</strong> &nbsp; 💰 Funding: <strong>{contract.fundingSpec}</strong></div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                <div style={{ display: "flex", gap: 5 }}>
+                  <Pill color={contract.program === "Section 8" ? "#1e40af" : "#7c3aed"}>{contract.program}</Pill>
+                  <StatusBadge status={contract.status} />
+                </div>
+                <Pill color={contract.alert.color} bg={contract.alert.bg}>{contract.alert.icon} {contract.alert.label}</Pill>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 5, marginTop: 10 }}>
+              {PHASES.map(p => { const ps = WORKFLOW_STEPS.filter(s => s.phase === p.id && s.dateField && !s.isCorrection); const dn = ps.filter(s => dates[s.dateField]).length; return (
+                <div key={p.id} style={{ flex: 1 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span style={{ fontSize: 8, fontWeight: 700, color: p.color, textTransform: "uppercase" }}>P{p.id}</span><span style={{ fontSize: 8, color: "#94a3b8" }}>{dn}/{ps.length}</span></div><Bar pct={ps.length ? (dn / ps.length) * 100 : 0} color={p.color} /></div>
+              ); })}
+            </div>
+          </div>
+
+          {/* Phases */}
+          <div style={{ marginLeft: 14, paddingLeft: 14, borderLeft: "3px solid #bfdbfe" }}>
             {PHASES.map(phase => {
               const steps = WORKFLOW_STEPS.filter(s => s.phase === phase.id);
               const collapsed = isPhaseCollapsed(phase.id);
-              const phaseHasCurrent = steps.some(s => getStepStatus(s) === "current");
-              const phaseDone = steps.filter(s => s.dateField && dates[s.dateField]).length;
-              const phaseTotal = steps.filter(s => s.dateField).length;
-              const allStepsComplete = steps.filter(s => s.dateField && !s.isOptional && !s.isCorrection).every(s => dates[s.dateField]);
-              const noStepsStarted = !steps.some(s => s.dateField && dates[s.dateField]);
+              const allDone = steps.filter(s => s.dateField && !s.isCorrection).every(s => dates[s.dateField]);
+              const noStart = !steps.some(s => s.dateField && dates[s.dateField]);
+              const hasActive = phase.id === currentPhaseId;
+              const doneCt = steps.filter(s => s.dateField && dates[s.dateField]).length;
+              const totalCt = steps.filter(s => s.dateField).length;
 
-              return (
-                <div key={phase.id} style={{ marginBottom: 12 }}>
-                  {/* Phase Header — clickable to toggle collapse */}
-                  <div onClick={() => togglePhase(phase.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 10, marginBottom: collapsed ? 0 : 5,
-                      padding: "7px 14px", borderRadius: collapsed ? 10 : 10,
-                      background: phase.bg, border: `1px solid ${phase.border}`, cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}>
-                    <span style={{
-                      width: 24, height: 24, borderRadius: "50%",
-                      background: allStepsComplete ? "#16a34a" : phase.color,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "#fff", fontSize: 11, fontWeight: 700,
-                    }}>
-                      {allStepsComplete ? "✓" : phase.id}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: allStepsComplete ? "#16a34a" : phase.color }}>{phase.name}</span>
-
-                    {/* Collapsed summary chips */}
-                    {collapsed && (
-                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: 8 }}>
-                        {allStepsComplete && <span style={{ fontSize: 10, color: "#16a34a", fontWeight: 600 }}>All steps complete</span>}
-                        {noStepsStarted && !allStepsComplete && <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 500 }}>Not yet started</span>}
-                        {phaseHasCurrent && <span style={{ fontSize: 10, padding: "1px 8px", borderRadius: 10, background: phase.color, color: "#fff", fontWeight: 700 }}>● Active</span>}
-                        {!allStepsComplete && !noStepsStarted && !phaseHasCurrent && <span style={{ fontSize: 10, color: "#d97706", fontWeight: 600 }}>In progress — {phaseDone}/{phaseTotal} dates</span>}
-                      </div>
-                    )}
-
-                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 10, color: phase.color, opacity: 0.6 }}>{phaseDone}/{phaseTotal} dates</span>
-                      <span style={{
-                        fontSize: 14, color: phase.color, opacity: 0.5,
-                        transform: collapsed ? "rotate(0deg)" : "rotate(90deg)",
-                        transition: "transform 0.2s",
-                      }}>▸</span>
-                    </div>
+              return (<div key={phase.id} style={{ marginBottom: 10 }}>
+                <div onClick={() => togglePhase(phase.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 10, background: phase.bg, border: `1px solid ${phase.border}`, cursor: "pointer" }}>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: allDone ? "#16a34a" : phase.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700 }}>{allDone ? "✓" : phase.id}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: allDone ? "#16a34a" : phase.color }}>{phase.name}</span>
+                  {collapsed && <span style={{ fontSize: 10, marginLeft: 6, color: allDone ? "#16a34a" : noStart ? "#94a3b8" : hasActive ? "#fff" : "#d97706", fontWeight: 600, ...(hasActive && !allDone ? { background: phase.color, padding: "1px 7px", borderRadius: 10 } : {}) }}>
+                    {allDone ? "All complete" : noStart ? "Not started" : hasActive ? "● Active" : `${doneCt}/${totalCt}`}
+                  </span>}
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 9, color: phase.color, opacity: 0.6 }}>{doneCt}/{totalCt}</span>
+                    <span style={{ fontSize: 12, color: phase.color, opacity: 0.5, transform: collapsed ? "none" : "rotate(90deg)", transition: "transform 0.15s" }}>▸</span>
                   </div>
-
-                  {/* Steps — visible when NOT collapsed */}
-                  {!collapsed && (
-                  <div style={{ display: "grid", gap: 3, paddingLeft: 14 }}>
-                    {steps.map(step => {
-                      const stepStatus = getStepStatus(step);
-                      const isExpanded = expandedStep === step.id;
-                      const isComplete = stepStatus === "complete";
-                      const isCurrent = stepStatus === "current";
-                      const stepAttachments = getStepAttachments(step.id);
-                      const nextRole = step.forwardTo ? WORKFLOW_STEPS.find(s => s.id === step.forwardTo) : null;
-
-                      return (
-                        <div key={step.id} style={{
-                          borderRadius: 10, overflow: "hidden",
-                          border: isCurrent ? `2px solid ${phase.color}` : isComplete ? "1px solid #d1fae5" : "1px solid #e2e8f0",
-                          background: isCurrent ? phase.bg : isComplete ? "#f0fdf4" : "#fff",
-                          boxShadow: isCurrent ? `0 0 0 3px ${phase.color}22` : "none",
-                          opacity: step.isOptional && !dates[step.dateField] ? 0.55 : 1,
-                        }}>
-                          {/* Step Header */}
-                          <div onClick={() => setExpandedStep(isExpanded ? null : step.id)}
-                            style={{ display: "grid", gridTemplateColumns: "48px 78px 1fr auto auto 120px 24px", padding: "8px 14px", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: isComplete ? "#16a34a" : isCurrent ? phase.color : "#94a3b8" }}>
-                              {isComplete ? "✓" : isCurrent ? "●" : "○"} {step.id}
-                            </span>
-                            <RoleBadge roleKey={step.role} />
-                            <div>
-                              <span style={{ fontSize: 12, fontWeight: isComplete || isCurrent ? 600 : 400, color: isComplete ? "#166534" : isCurrent ? "#1e293b" : "#64748b" }}>{step.label}</span>
-                              {step.isDecision && <span style={{ marginLeft: 6, fontSize: 9, color: "#d97706", fontWeight: 700 }}>◆ DECISION</span>}
-                              {step.isCorrection && <span style={{ marginLeft: 6, fontSize: 9, color: "#dc2626", fontWeight: 700 }}>↩ CORRECTION</span>}
-                              {step.isOptional && <span style={{ marginLeft: 6, fontSize: 9, color: "#94a3b8" }}>(optional)</span>}
-                              {step.isFinal && <span style={{ marginLeft: 6, fontSize: 9, color: "#059669", fontWeight: 700 }}>★ FINAL</span>}
-                            </div>
-                            {stepAttachments.length > 0 ? (
-                              <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 10, background: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd" }}>📎 {stepAttachments.length}</span>
-                            ) : <span />}
-                            {showProgramNotes && step.programNote !== "BOTH" && step.programNote ? (
-                              <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#fef3c7", color: "#92400e", fontWeight: 600 }}>⚙ PROGRAM</span>
-                            ) : <span />}
-                            <div style={{ textAlign: "right" }}>
-                              {step.dateField && dates[step.dateField] ? (
-                                <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a" }}>{dates[step.dateField]}</span>
-                              ) : step.dateField ? (
-                                <span style={{ fontSize: 10, color: isCurrent ? phase.color : "#cbd5e1", fontWeight: isCurrent ? 600 : 400 }}>{isCurrent ? "⏳ Awaiting" : "No date"}</span>
-                              ) : null}
-                            </div>
-                            <span style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>▸</span>
-                          </div>
-
-                          {/* Expanded */}
-                          {isExpanded && (
-                            <div style={{ borderTop: "1px solid #e2e8f0", background: "#fafbfc" }}>
-                              <div style={{ padding: "12px 16px 0 58px" }}>
-                                <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6, marginBottom: 8 }}>{step.description}</div>
-                                {showProgramNotes && step.programNote && step.programNote !== "BOTH" && (
-                                  <div style={{ fontSize: 11, color: "#92400e", background: "#fef3c7", padding: "8px 12px", borderRadius: 6, marginBottom: 8, border: "1px solid #fde68a", lineHeight: 1.5, whiteSpace: "pre-line" }}>
-                                    <strong>⚙ Program-specific criteria:</strong><br />{step.programNote}
-                                  </div>
-                                )}
-                                {/* Date Entry */}
-                                {step.dateField && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                                    <span style={{ fontSize: 10, color: "#64748b", fontWeight: 600, fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>{step.dateField}</span>
-                                    <input type="date" value={dates[step.dateField] || ""} onClick={e => e.stopPropagation()}
-                                      onChange={e => { e.stopPropagation(); setDate(step.dateField, e.target.value); }}
-                                      style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12, background: "#fff", outline: "none" }} />
-                                    {dates[step.dateField] && (
-                                      <button onClick={e => { e.stopPropagation(); clearDate(step.dateField); }}
-                                        style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 10, cursor: "pointer", fontWeight: 600 }}>Clear</button>
-                                    )}
-                                    {step.dateField === "Date_Fund_Rcvd_1" && dates.Date_Sent_Fund_Req && dates.Date_Fund_Rcvd_1 && <span style={{ fontSize: 11, color: "#1e40af", fontWeight: 600 }}>⏱ HQ: {daysBetween(dates.Date_Sent_Fund_Req, dates.Date_Fund_Rcvd_1)}d</span>}
-                                    {step.dateField === "Date_Rcvd_OA_Sign" && dates.Date_Sent_OA_Sign && dates.Date_Rcvd_OA_Sign && <span style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>⏱ Owner: {daysBetween(dates.Date_Sent_OA_Sign, dates.Date_Rcvd_OA_Sign)}d</span>}
-                                    {step.dateField === "Date_Rcvd_BC_Sign" && dates.Date_Sent_BC_Sign && dates.Date_Rcvd_BC_Sign && <span style={{ fontSize: 11, color: "#059669", fontWeight: 600 }}>⏱ BC: {daysBetween(dates.Date_Sent_BC_Sign, dates.Date_Rcvd_BC_Sign)}d</span>}
-                                    {step.dateField === "Date_FW_Complete" && dates.Date_Sent_FW && dates.Date_FW_Complete && <span style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>⏱ FW: {daysBetween(dates.Date_Sent_FW, dates.Date_FW_Complete)}d</span>}
-                                    {step.isFinal && dates.Date_Rcvd_From_AE && dates.Date_Contract_Executed && <span style={{ fontSize: 12, color: "#047857", fontWeight: 700, padding: "2px 10px", background: "#d1fae5", borderRadius: 6 }}>🏁 Total: {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d</span>}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Attachments */}
-                              <div style={{ padding: "0 16px 0 58px", marginBottom: 8 }}>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#475569" }}>📎 Attachments ({stepAttachments.length})</span>
-                                  <button onClick={e => { e.stopPropagation(); setUploadTarget(step.id); fileInputRef.current?.click(); }}
-                                    style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>+ Attach File</button>
-                                </div>
-                                {stepAttachments.length > 0 ? (
-                                  <div style={{ display: "grid", gap: 2 }}>
-                                    {stepAttachments.map((att, i) => {
-                                      const fi = fileIcon(att.name);
-                                      return (
-                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6, background: "#fff", border: "1px solid #e2e8f0" }}>
-                                          <span style={{ fontSize: 15 }}>{fi.icon}</span>
-                                          <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: 11, fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</div>
-                                            <div style={{ fontSize: 9, color: "#94a3b8" }}>{att.size} &middot; {att.date} &middot; {att.addedBy}</div>
-                                          </div>
-                                          <button onClick={e => { e.stopPropagation(); removeAttachment(step.id, i); }}
-                                            style={{ padding: "2px 5px", borderRadius: 4, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 9, cursor: "pointer" }}>✕</button>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ) : <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic", padding: "4px 0" }}>No attachments. Click "Attach File" to upload.</div>}
-                              </div>
-
-                              {/* Notes */}
-                              <div style={{ padding: "0 16px 8px 58px" }}>
-                                <textarea placeholder="Add notes..." value={notes[`${selectedContractId}-${step.id}`] || ""} onClick={e => e.stopPropagation()}
-                                  onChange={e => { e.stopPropagation(); setNotes(prev => ({ ...prev, [`${selectedContractId}-${step.id}`]: e.target.value })); }}
-                                  style={{ width: "100%", padding: "5px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 11, fontFamily: "inherit", resize: "vertical", minHeight: 30, outline: "none", background: "#fff" }} />
-                              </div>
-
-                              {/* Forward Action */}
-                              {step.forwardTo && !step.isFinal && (
-                                <div style={{ padding: "8px 16px 10px 58px", borderTop: "1px solid #e2e8f0", background: isCurrent ? phase.bg : "#f8fafc", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                                  {forwardConfirm === `${step.id}-fwd` ? (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                      <span style={{ fontSize: 11, color: "#475569" }}>Forward to <strong>{nextRole ? ROLES[nextRole.role].label : step.forwardTo}</strong>{actingAs !== "self" ? ` (as ${actingStaff.name})` : ""}?</span>
-                                      <button onClick={e => { e.stopPropagation(); handleForward(step, step.forwardTo); }}
-                                        style={{ padding: "5px 14px", borderRadius: 6, border: "none", background: phase.color, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✓ Confirm &amp; Forward</button>
-                                      <button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }}
-                                        style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Cancel</button>
-                                    </div>
-                                  ) : (
-                                    <button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-fwd`); }}
-                                      style={{
-                                        padding: "5px 14px", borderRadius: 8, border: "none",
-                                        background: isCurrent ? phase.color : "#e2e8f0", color: isCurrent ? "#fff" : "#475569",
-                                        fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                                        boxShadow: isCurrent ? `0 2px 8px ${phase.color}44` : "none",
-                                      }}>
-                                      {step.forwardLabel} → {nextRole && <RoleBadge roleKey={nextRole.role} />}
-                                    </button>
-                                  )}
-                                  {step.altForwardTo && (
-                                    <>
-                                      {forwardConfirm === `${step.id}-alt` ? (
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                          <button onClick={e => { e.stopPropagation(); handleForward(step, step.altForwardTo); }}
-                                            style={{ padding: "5px 14px", borderRadius: 6, border: "none", background: "#dc2626", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button>
-                                          <button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }}
-                                            style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Cancel</button>
-                                        </div>
-                                      ) : (
-                                        <button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-alt`); }}
-                                          style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                                          {step.altForwardLabel} ↩
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                  {actingAs !== "self" && (
-                                    <span style={{ fontSize: 10, color: "#92400e", fontStyle: "italic", marginLeft: 4 }}>Acting as {actingStaff.name}</span>
-                                  )}
-                                </div>
-                              )}
-                              {step.isFinal && dates.Date_Contract_Executed && (
-                                <div style={{ padding: "10px 16px 12px 58px", borderTop: "1px solid #bbf7d0", background: "#f0fdf4", textAlign: "center" }}>
-                                  <div style={{ fontSize: 14, fontWeight: 700, color: "#047857" }}>🎉 Contract Renewal Complete</div>
-                                  <div style={{ fontSize: 11, color: "#16a34a", marginTop: 2 }}>Total cycle: {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)} days &middot; Executed {dates.Date_Contract_Executed}</div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  )}
                 </div>
-              );
+
+                {!collapsed && <div style={{ display: "grid", gap: 2, paddingLeft: 12, marginTop: 3 }}>
+                  {steps.map(step => {
+                    const ss = getStepStatus(step); const isExp = expandedStep === step.id; const done = ss === "complete"; const cur = ss === "current"; const att = getAtt(step.id); const nxt = step.forwardTo ? WORKFLOW_STEPS.find(s => s.id === step.forwardTo) : null;
+                    return (<div key={step.id} style={{ borderRadius: 8, border: cur ? `2px solid ${phase.color}` : done ? "1px solid #d1fae5" : "1px solid #e2e8f0", background: cur ? phase.bg : done ? "#f0fdf4" : "#fff", boxShadow: cur ? `0 0 0 2px ${phase.color}22` : "none", opacity: step.isOptional && !dates[step.dateField] ? 0.5 : step.isCorrection && !dates[step.dateField] ? 0.5 : 1 }}>
+                      <div onClick={() => setExpandedStep(isExp ? null : step.id)} style={{ display: "grid", gridTemplateColumns: "42px 68px 1fr auto 100px 20px", padding: "6px 12px", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: done ? "#16a34a" : cur ? phase.color : "#94a3b8" }}>{done ? "✓" : cur ? "●" : "○"} {step.id}</span>
+                        <RoleBadge roleKey={step.role} />
+                        <div>
+                          <span style={{ fontSize: 11, fontWeight: done || cur ? 600 : 400, color: done ? "#166534" : cur ? "#1e293b" : "#64748b" }}>{step.label}</span>
+                          {step.isDecision && <span style={{ marginLeft: 5, fontSize: 8, color: "#d97706", fontWeight: 700 }}>◆ DECISION</span>}
+                          {step.isCorrection && <span style={{ marginLeft: 5, fontSize: 8, color: "#dc2626", fontWeight: 700 }}>↩ CORRECTION</span>}
+                          {step.isFinal && <span style={{ marginLeft: 5, fontSize: 8, color: "#059669", fontWeight: 700 }}>★ FINAL</span>}
+                        </div>
+                        {att.length > 0 ? <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "#e0f2fe", color: "#0369a1" }}>📎{att.length}</span> : <span />}
+                        <div style={{ textAlign: "right" }}>{step.dateField && dates[step.dateField] ? <span style={{ fontSize: 10, fontWeight: 600, color: "#16a34a" }}>{dates[step.dateField]}</span> : step.dateField ? <span style={{ fontSize: 9, color: cur ? phase.color : "#cbd5e1" }}>{cur ? "⏳ Awaiting" : "—"}</span> : null}</div>
+                        <span style={{ fontSize: 10, color: "#94a3b8", transform: isExp ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>▸</span>
+                      </div>
+
+                      {isExp && (<div style={{ borderTop: "1px solid #e2e8f0", background: "#fafbfc", padding: "10px 14px 10px 50px" }}>
+                        <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 8 }}>{step.description}</div>
+                        {showProgramNotes && step.programNote && step.programNote !== "BOTH" && <div style={{ fontSize: 10, color: "#92400e", background: "#fef3c7", padding: "6px 10px", borderRadius: 6, marginBottom: 8, border: "1px solid #fde68a", whiteSpace: "pre-line" }}>⚙ {step.programNote}</div>}
+                        {step.dateField && <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                          <span style={{ fontSize: 9, fontFamily: "monospace", background: "#f1f5f9", padding: "2px 5px", borderRadius: 4, color: "#64748b" }}>{step.dateField}</span>
+                          <input type="date" value={dates[step.dateField] || ""} onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); setDate(step.dateField, e.target.value); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 11, outline: "none" }} />
+                          {dates[step.dateField] && <button onClick={e => { e.stopPropagation(); clearDate(step.dateField); }} style={{ padding: "2px 7px", borderRadius: 6, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 9, cursor: "pointer" }}>Clear</button>}
+                          {step.dateField === "Date_Fund_Rcvd_1" && dates.Date_Sent_Fund_Req && dates.Date_Fund_Rcvd_1 && <span style={{ fontSize: 10, color: "#1e40af", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_Fund_Req, dates.Date_Fund_Rcvd_1)}d</span>}
+                          {step.dateField === "Date_Rcvd_OA_Sign" && dates.Date_Sent_OA_Sign && dates.Date_Rcvd_OA_Sign && <span style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_OA_Sign, dates.Date_Rcvd_OA_Sign)}d</span>}
+                          {step.dateField === "Date_Rcvd_BC_Sign" && dates.Date_Sent_BC_Sign && dates.Date_Rcvd_BC_Sign && <span style={{ fontSize: 10, color: "#059669", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_BC_Sign, dates.Date_Rcvd_BC_Sign)}d</span>}
+                          {step.dateField === "Date_FW_Complete" && dates.Date_Sent_FW && dates.Date_FW_Complete && <span style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_FW, dates.Date_FW_Complete)}d</span>}
+                          {step.isFinal && dates.Date_Rcvd_From_AE && dates.Date_Contract_Executed && <span style={{ fontSize: 11, color: "#047857", fontWeight: 700, padding: "2px 8px", background: "#d1fae5", borderRadius: 6 }}>🏁 {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d total</span>}
+                        </div>}
+                        {/* Attachments */}
+                        <div style={{ marginBottom: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#475569" }}>📎 Attachments ({att.length})</span><button onClick={e => { e.stopPropagation(); setUploadTarget(step.id); fileInputRef.current?.click(); }} style={{ padding: "2px 8px", borderRadius: 6, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>+ Attach</button></div>
+                          {att.map((a, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 5, background: "#fff", border: "1px solid #e2e8f0", marginBottom: 2, fontSize: 10 }}><span>{fileIcon(a.name)}</span><span style={{ flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span><span style={{ color: "#94a3b8", fontSize: 9 }}>{a.size} &middot; {a.date}</span><button onClick={e => { e.stopPropagation(); const k = `${selectedContractId}-${step.id}`; setAttachments(p => ({ ...p, [k]: (p[k] || []).filter((_, j) => j !== i) })); }} style={{ border: "none", background: "none", color: "#dc2626", cursor: "pointer", fontSize: 10 }}>✕</button></div>))}
+                          {att.length === 0 && <div style={{ fontSize: 10, color: "#94a3b8", fontStyle: "italic" }}>No attachments</div>}
+                        </div>
+                        {/* Notes */}
+                        <textarea placeholder="Notes..." value={notes[`${selectedContractId}-${step.id}`] || ""} onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); setNotes(p => ({ ...p, [`${selectedContractId}-${step.id}`]: e.target.value })); }} style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 10, fontFamily: "inherit", resize: "vertical", minHeight: 26, outline: "none" }} />
+                        {/* Forward */}
+                        {step.forwardTo && !step.isFinal && (<div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                          {forwardConfirm === `${step.id}-f` ? (<><button onClick={e => { e.stopPropagation(); handleForward(step, step.forwardTo); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: phase.color, color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button><button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontSize: 10, cursor: "pointer" }}>Cancel</button></>
+                          ) : (<button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-f`); }} style={{ padding: "4px 12px", borderRadius: 8, border: "none", background: cur ? phase.color : "#e2e8f0", color: cur ? "#fff" : "#475569", fontSize: 10, fontWeight: 700, cursor: "pointer", boxShadow: cur ? `0 2px 6px ${phase.color}44` : "none" }}>{step.forwardLabel} → {nxt && <RoleBadge roleKey={nxt.role} />}</button>)}
+                          {step.altForwardTo && (<>{forwardConfirm === `${step.id}-a` ? (<><button onClick={e => { e.stopPropagation(); handleForward(step, step.altForwardTo); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button><button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", fontSize: 10, cursor: "pointer", color: "#64748b" }}>Cancel</button></>) : (<button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-a`); }} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{step.altForwardLabel} ↩</button>)}</>)}
+                          {actingAs !== "self" && <span style={{ fontSize: 9, color: "#92400e", fontStyle: "italic" }}>as {actingStaff.name}</span>}
+                        </div>)}
+                        {step.isFinal && dates.Date_Contract_Executed && <div style={{ marginTop: 8, padding: "8px", borderRadius: 6, background: "#f0fdf4", textAlign: "center", border: "1px solid #bbf7d0" }}><span style={{ fontSize: 13, fontWeight: 700, color: "#047857" }}>🎉 Complete — {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d cycle</span></div>}
+                      </div>)}
+                    </div>);
+                  })}
+                </div>}
+              </div>);
             })}
           </div>
-        )}
+          </>)}
+        </div>)}
 
-        {/* ═══ ACTIVITY LOG VIEW ═══ */}
-        {viewMode === "activity" && (
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#1e293b" }}>Activity Log — All Routing Actions</div>
-            {activityLog.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 12 }}>No activity yet.</div>}
-            <div style={{ display: "grid", gap: 3 }}>
-              {activityLog.map((entry, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "130px 90px 1fr 180px", padding: "7px 14px", borderRadius: 6, background: "#fafbfc", border: "1px solid #f1f5f9", fontSize: 11, alignItems: "center", gap: 8 }}>
-                  <span style={{ color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{entry.time}</span>
-                  <span style={{ fontWeight: 600, color: "#1e40af" }}>{entry.contract}</span>
-                  <span style={{ color: "#1e293b" }}>{entry.action}</span>
-                  <span style={{ color: entry.user.includes("acting") ? "#92400e" : "#64748b", textAlign: "right", fontWeight: entry.user.includes("acting") ? 600 : 400 }}>{entry.user}</span>
-                </div>
-              ))}
-            </div>
+        {/* ═══════════════════════════════════════════════════════════════════
+            TURNAROUND
+           ═══════════════════════════════════════════════════════════════════ */}
+        {view === "turnaround" && (<div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            <Metric label="Avg HQ Funding" value={`${metrics.avgFund}d`} sub="Target: 10d" accent={metrics.avgFund > 10 ? "#ef4444" : "#16a34a"} />
+            <Metric label="Avg OA Signature" value={`${metrics.avgOA}d`} sub="Target: 10d" accent={metrics.avgOA > 10 ? "#ef4444" : "#16a34a"} />
+            <Metric label="Avg BC Review" value={`${metrics.avgBC}d`} sub="Target: 5d" accent={metrics.avgBC > 5 ? "#ef4444" : "#16a34a"} />
+            <Metric label="Avg FW Processing" value={`${metrics.avgFW}d`} sub="Target: 10d" accent={metrics.avgFW > 10 ? "#ef4444" : "#16a34a"} />
+            <Metric label="Avg Total Cycle" value={`${metrics.avgCycle}d`} sub="Target: 60d" accent={metrics.avgCycle > 60 ? "#ef4444" : "#16a34a"} />
           </div>
-        )}
-
-        {/* ═══ SUMMARY VIEW ═══ */}
-        {viewMode === "summary" && contract && (
-          <div>
-            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20, marginBottom: 14 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#1e293b" }}>Turnaround Time — {contract.contractNum}</div>
-              {[
-                { label: "AE Review", sent: "Date_Rcvd_From_AE", rcvd: "Date_Sent_To_Funding", color: "#2563eb" },
-                { label: "HQ Funding Response", sent: "Date_Sent_Fund_Req", rcvd: "Date_Fund_Rcvd_1", color: "#d97706", target: 10 },
-                { label: "Owner/Agent Signature", sent: "Date_Sent_OA_Sign", rcvd: "Date_Rcvd_OA_Sign", color: "#9333ea", target: 10 },
-                { label: "Branch Chief Review", sent: "Date_Sent_BC_Sign", rcvd: "Date_Rcvd_BC_Sign", color: "#059669", target: 5 },
-                { label: "Fort Worth Processing", sent: "Date_Sent_FW", rcvd: "Date_FW_Complete", color: "#7c3aed", target: 10 },
-                { label: "Total End-to-End", sent: "Date_Rcvd_From_AE", rcvd: "Date_Contract_Executed", color: "#0f172a", target: 60 },
-              ].map((pair, i) => {
-                const d = daysBetween(dates[pair.sent], dates[pair.rcvd]);
-                const hasBoth = dates[pair.sent] && dates[pair.rcvd];
-                const over = pair.target && d > pair.target;
-                return (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "170px 95px 95px 65px 1fr", padding: "8px 14px", borderRadius: 8, marginBottom: 3, alignItems: "center", background: hasBoth ? (over ? "#fef2f2" : "#f0fdf4") : "#fafbfc", border: `1px solid ${hasBoth ? (over ? "#fecaca" : "#bbf7d0") : "#f1f5f9"}` }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: pair.color }}>{pair.label}</span>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>{dates[pair.sent] || "—"}</span>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>{dates[pair.rcvd] || "—"}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, textAlign: "center", color: hasBoth ? (over ? "#dc2626" : "#16a34a") : "#cbd5e1" }}>{d != null ? `${d}d` : "—"}</span>
-                    <div style={{ height: 4, borderRadius: 2, background: "#e2e8f0" }}>{hasBoth && pair.target && <div style={{ height: 4, borderRadius: 2, background: over ? "#ef4444" : "#34d399", width: `${Math.min((d / pair.target) * 100, 100)}%` }} />}</div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* All Contracts Status Overview */}
-            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#1e293b" }}>All Contracts — Status &amp; Alert Overview</div>
-              <div style={{ display: "grid", gap: 3 }}>
-                {SAMPLE_CONTRACTS.map(c => {
-                  const d = contractDates[c.id] || {};
-                  const s = getAutoStatus(d);
-                  const a = getExpirationAlert(c.contractExpiration);
-                  return (
-                    <div key={c.id} onClick={() => { selectContract(c.id); setViewMode("flow"); }}
-                      style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 120px 140px", padding: "8px 14px", borderRadius: 8, background: "#fafbfc", border: "1px solid #f1f5f9", cursor: "pointer", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</span>
-                      <span style={{ fontSize: 11, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.propName}</span>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>{c.program}</span>
-                      <AlertBadge alert={a} />
-                      <StatusBadge status={s} />
-                    </div>
-                  );
-                })}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Bottleneck Identification</div>
+            {[{ stage: "HQ Funding", avg: metrics.avgFund, target: 10, color: "#f59e0b" }, { stage: "Owner Signature", avg: metrics.avgOA, target: 10, color: "#a78bfa" }, { stage: "Branch Chief", avg: metrics.avgBC, target: 5, color: "#60a5fa" }, { stage: "Fort Worth", avg: metrics.avgFW, target: 10, color: "#2dd4bf" }].sort((a, b) => b.avg - a.avg).map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <div style={{ width: 150, fontSize: 11, color: "#475569" }}>{item.stage}</div>
+                <div style={{ flex: 1 }}><Bar pct={(item.avg / 30) * 100} color={item.avg > item.target ? "#ef4444" : item.color} /></div>
+                <div style={{ width: 50, textAlign: "right", fontSize: 11, fontWeight: 700, color: item.avg > item.target ? "#ef4444" : "#16a34a" }}>{item.avg}d</div>
+                <div style={{ width: 55, textAlign: "right", fontSize: 9, color: "#94a3b8" }}>target: {item.target}d</div>
               </div>
-            </div>
+            ))}
           </div>
-        )}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Longest Processing Contracts</div>
+            {allContracts.filter(c => c.dates.Date_Rcvd_From_AE && c.dates.Date_Contract_Executed).map(c => ({ ...c, days: daysBetween(c.dates.Date_Rcvd_From_AE, c.dates.Date_Contract_Executed) })).sort((a, b) => b.days - a.days).slice(0, 6).map(c => (
+              <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderRadius: 8, marginBottom: 3, cursor: "pointer", background: "#fafbfc", border: "1px solid #f1f5f9", fontSize: 11 }}>
+                <div><span style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</span> <span style={{ color: "#94a3b8", marginLeft: 6 }}>{c.propName}</span></div>
+                <span style={{ fontWeight: 700, color: c.days > 60 ? "#ef4444" : "#f59e0b" }}>{c.days}d</span>
+              </div>
+            ))}
+          </div>
+        </div>)}
 
-        <div style={{ textAlign: "center", padding: "16px 0 8px", fontSize: 10, color: "#94a3b8" }}>
-          HUD Multifamily Housing &middot; Funding Workflow Tracker
-        </div>
+        {/* ═══════════════════════════════════════════════════════════════════
+            REGIONAL
+           ═══════════════════════════════════════════════════════════════════ */}
+        {view === "regional" && (<div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Cross-Regional Performance</div>
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.7 }}>
+              <div>Region</div><div>Total</div><div>Done</div><div>Awaiting</div><div>Corrections</div><div>Avg Cycle</div><div>Completion</div>
+            </div>
+            {regionMetrics.sort((a, b) => b.pct - a.pct).map((r, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, alignItems: "center" }}>
+                <div style={{ fontWeight: 600 }}>{r.region}</div>
+                <div>{r.total}</div>
+                <div style={{ color: "#16a34a", fontWeight: 600 }}>{r.complete}</div>
+                <div style={{ color: r.awaiting > 1 ? "#f59e0b" : "#64748b", fontWeight: r.awaiting > 1 ? 600 : 400 }}>{r.awaiting}</div>
+                <div style={{ color: r.corrections > 0 ? "#ef4444" : "#64748b", fontWeight: r.corrections > 0 ? 600 : 400 }}>{r.corrections}</div>
+                <div style={{ fontWeight: 700, color: r.avgCycle === null ? "#94a3b8" : r.avgCycle > 60 ? "#ef4444" : "#16a34a" }}>{r.avgCycle != null ? `${r.avgCycle}d` : "—"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Bar pct={r.pct} color={r.pct > 50 ? "#34d399" : r.pct > 25 ? "#f59e0b" : "#ef4444"} /><span style={{ fontSize: 10, fontWeight: 600, minWidth: 28 }}>{r.pct}%</span></div>
+              </div>
+            ))}
+          </div>
+        </div>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            ACTIVITY LOG
+           ═══════════════════════════════════════════════════════════════════ */}
+        {view === "activity" && (<div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Activity Log — All Routing Actions</div>
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
+            {activityLog.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 12 }}>No activity yet.</div>}
+            {activityLog.map((e, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 90px 1fr 170px", padding: "6px 12px", borderRadius: 6, background: "#fafbfc", border: "1px solid #f1f5f9", marginBottom: 3, fontSize: 11, alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{e.time}</span>
+                <span style={{ fontWeight: 600, color: "#1e40af" }}>{e.contract}</span>
+                <span>{e.action}</span>
+                <span style={{ color: e.user.includes("acting") ? "#92400e" : "#64748b", textAlign: "right", fontWeight: e.user.includes("acting") ? 600 : 400 }}>{e.user}</span>
+              </div>
+            ))}
+          </div>
+        </div>)}
+
+        <div style={{ textAlign: "center", padding: "14px 0 6px", fontSize: 9, color: "#94a3b8" }}>HUD Multifamily Housing &middot; Funding Workflow Tracker</div>
       </div>
     </div>
   );
