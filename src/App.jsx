@@ -82,8 +82,93 @@ const STAFF = [
 // ── Sample Contracts ─────────────────────────────────────────────────────
 const TODAY = new Date();
 const daysFromNow = (n) => { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d.toISOString().split("T")[0]; };
+function addDays(dateStr, days) { if (!dateStr) return null; const d = new Date(dateStr); d.setDate(d.getDate() + days); return d.toISOString().split("T")[0]; }
+function randomDate(startD, endD) { const d = new Date(startD.getTime() + Math.random() * (endD.getTime() - startD.getTime())); return d.toISOString().split("T")[0]; }
 
-const CONTRACTS_INIT = [
+const PROP_FIRST = ["Sunrise","Oak","Cedar","Elm","Pine","Maple","Willow","Birch","Cherry","Holly","Walnut","Spruce","Laurel","Aspen","Magnolia","Hawthorn","Alder","Beech","Chestnut","Cypress","Hickory","Juniper","Linden","Poplar","Sequoia","Sycamore","Redwood","Dogwood","Fern","Ivy"];
+const PROP_SECOND = ["Manor","Creek","Hill","Park","View","Brook","Glen","Ridge","Valley","Meadow","Springs","Terrace","Landing","Crossing","Heights","Pointe","Cove","Harbor","Station","Gardens"];
+const PROP_SUFFIX = ["Apartments","Village","Estates","Towers","Commons","Senior Living","Residences","Place"];
+const RENEWAL_OPTS_S8 = ["Option 1a: Mark-Up-To-Market","Option 1b: Discretionary Mark-Up","Option 2: At/Below Comparable","Option 3b: Full Mark-to-Market","Option 4: Exempt from OAHP","Option 5b: Preservation"];
+const REGION_STAFF = {
+  "Region 2 - New York": { aes: ["K. Thompson"], bcs: ["T. Walsh"], funds: ["A. Jackson"] },
+  "Region 3 - Philadelphia": { aes: ["D. Garcia"], bcs: ["T. Walsh"], funds: ["A. Jackson"] },
+  "Region 4 - Atlanta": { aes: ["R. Williams"], bcs: ["P. Morgan"], funds: ["M. Torres"] },
+  "Region 5 - Chicago": { aes: ["S. Patel"], bcs: ["N. Okafor"], funds: ["C. Rivera"] },
+  "Region 9 - San Francisco": { aes: ["L. Chen"], bcs: ["P. Morgan"], funds: ["M. Torres"] },
+};
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const rInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+
+function generateContracts(n) {
+  const contracts = [];
+  const dateMap = {};
+  // Status distribution: realistic pipeline (weighted)
+  // 01=8%, 02=10%, 03=18%, 04=12%, 05=8%, 06=30%, 90=10%, 99=4%
+  const statusWeights = [1,1,2,2,2,3,3,3,3,4,4,4,5,5,5,6,6,6,6,6,6,6,6,6,7,7,7,8];
+  const statusMap = {1:"01",2:"02",3:"03",4:"04",5:"05",6:"06",7:"90",8:"99"};
+
+  for (let i = 0; i < n; i++) {
+    const id = 100 + i;
+    const region = pick(REGIONS);
+    const staff = REGION_STAFF[region];
+    const program = Math.random() < 0.76 ? "Section 8" : "PRAC";
+    const renewalOption = program === "Section 8" ? pick(RENEWAL_OPTS_S8) : "Standard Renewal";
+    const contractNum = `HAP-${String(10500 + i).padStart(5, "0")}`;
+    const fhaNum = `${rInt(100, 999)}-${rInt(10000, 99999)}`;
+    const propName = `${pick(PROP_FIRST)} ${pick(PROP_SECOND)} ${pick(PROP_SUFFIX)}`;
+    const units = rInt(20, 300);
+    const monthlyHAP = rInt(12000, 200000);
+    // Expiration spread: some expired, some urgent, most future
+    const expDays = pick([-30,-15,-5,5,15,22,35,45,55,70,88,100,115,130,150,180,200,250,300,365]);
+    const contractExpiration = daysFromNow(expDays);
+    const ae = pick(staff.aes);
+    const bc = pick(staff.bcs);
+    const fund = pick(staff.funds);
+
+    // Generate dates based on status
+    const sw = statusMap[statusWeights[i % statusWeights.length]];
+    const statusIdx = STATUS_CODES.findIndex(s => s.code === sw);
+    const dates = {};
+    const baseDate = randomDate(new Date("2024-09-01"), new Date("2025-11-01"));
+
+    if (statusIdx >= 1 || sw === "90") dates.Date_AMPS_Log_Created = baseDate;
+    if (statusIdx >= 1) {
+      dates.Date_Rcvd_From_AE = addDays(baseDate, rInt(1, 3));
+      if (statusIdx >= 2 || sw === "90") {
+        dates.Date_Sent_To_Funding = addDays(dates.Date_Rcvd_From_AE, rInt(2, 5));
+        dates.Date_Funding_Received_Package = addDays(dates.Date_Sent_To_Funding, rInt(1, 2));
+        dates.Date_Sent_Fund_Req = addDays(dates.Date_Funding_Received_Package, rInt(1, 4));
+      }
+      if (statusIdx >= 3) {
+        dates.Date_Fund_Rcvd_1 = addDays(dates.Date_Sent_Fund_Req, rInt(5, 22));
+        dates.Date_Contract_Prepared = addDays(dates.Date_Fund_Rcvd_1, rInt(1, 3));
+        dates.Date_Sent_OA_Sign = addDays(dates.Date_Contract_Prepared, rInt(0, 2));
+      }
+      if (statusIdx >= 4) {
+        dates.Date_Rcvd_OA_Sign = addDays(dates.Date_Sent_OA_Sign, rInt(3, 18));
+        dates.Date_Sent_BC_Sign = addDays(dates.Date_Rcvd_OA_Sign, rInt(1, 2));
+        dates.Date_Rcvd_BC_Sign = addDays(dates.Date_Sent_BC_Sign, rInt(2, 6));
+        dates.Date_Sent_FW = addDays(dates.Date_Rcvd_BC_Sign, rInt(0, 1));
+      }
+      if (statusIdx >= 5) {
+        dates.Date_FW_Complete = addDays(dates.Date_Sent_FW, rInt(5, 18));
+        dates.Date_Systems_Updated = addDays(dates.Date_FW_Complete, rInt(1, 3));
+        dates.Date_LOCCS_Complete = addDays(dates.Date_Systems_Updated, rInt(1, 2));
+        dates.Date_Contract_Executed = dates.Date_LOCCS_Complete;
+      }
+    }
+    if (sw === "90") {
+      dates.Date_Sent_Corrections = addDays(dates.Date_Sent_Fund_Req || dates.Date_Rcvd_From_AE, rInt(3, 10));
+    }
+
+    contracts.push({ id, contractNum, fhaNum, propName, program, region, ae, branchChief: bc, fundingSpec: fund, units, monthlyHAP, renewalOption, contractExpiration });
+    dateMap[id] = dates;
+  }
+  return { contracts, dateMap };
+}
+
+// Keep original 8 hand-crafted contracts
+const HANDCRAFTED = [
   { id: 1, contractNum: "HAP-10042", fhaNum: "123-45678", propName: "Sunrise Manor Apartments", program: "Section 8", region: "Region 4 - Atlanta", ae: "R. Williams", branchChief: "P. Morgan", fundingSpec: "M. Torres", units: 156, monthlyHAP: 87500, renewalOption: "Option 2: At/Below Comparable", contractExpiration: daysFromNow(45) },
   { id: 2, contractNum: "HAP-10078", fhaNum: "456-78901", propName: "Oak Creek Village", program: "PRAC", region: "Region 5 - Chicago", ae: "S. Patel", branchChief: "N. Okafor", fundingSpec: "C. Rivera", units: 64, monthlyHAP: 32400, renewalOption: "Standard Renewal", contractExpiration: daysFromNow(88) },
   { id: 3, contractNum: "HAP-10115", fhaNum: "789-01234", propName: "Cedar Hill Estates", program: "Section 8", region: "Region 2 - New York", ae: "K. Thompson", branchChief: "T. Walsh", fundingSpec: "A. Jackson", units: 220, monthlyHAP: 165000, renewalOption: "Option 3b: Full Mark-to-Market", contractExpiration: daysFromNow(-15) },
@@ -94,7 +179,7 @@ const CONTRACTS_INIT = [
   { id: 8, contractNum: "HAP-10412", fhaNum: "901-23456", propName: "Birch Valley Apartments", program: "Section 8", region: "Region 5 - Chicago", ae: "S. Patel", branchChief: "N. Okafor", fundingSpec: "C. Rivera", units: 144, monthlyHAP: 78500, renewalOption: "Option 2: At/Below Comparable", contractExpiration: daysFromNow(-5) },
 ];
 
-const DATES_INIT = {
+const HANDCRAFTED_DATES = {
   1: { Date_AMPS_Log_Created: "2025-08-12", Date_Rcvd_From_AE: "2025-08-14", Date_Sent_To_Funding: "2025-08-18", Date_Funding_Received_Package: "2025-08-19", Date_Sent_Fund_Req: "2025-08-22", Date_Fund_Rcvd_1: "2025-09-03", Date_Contract_Prepared: "2025-09-05", Date_Sent_OA_Sign: "2025-09-06" },
   2: { Date_AMPS_Log_Created: "2025-09-01", Date_Rcvd_From_AE: "2025-09-03", Date_Sent_To_Funding: "2025-09-06" },
   3: { Date_AMPS_Log_Created: "2025-07-15", Date_Rcvd_From_AE: "2025-07-17", Date_Sent_To_Funding: "2025-07-20", Date_Funding_Received_Package: "2025-07-21", Date_Sent_Fund_Req: "2025-07-24", Date_Fund_Rcvd_1: "2025-08-05", Date_Contract_Prepared: "2025-08-07", Date_Sent_OA_Sign: "2025-08-08", Date_Rcvd_OA_Sign: "2025-08-15", Date_Sent_BC_Sign: "2025-08-16", Date_Rcvd_BC_Sign: "2025-08-19", Date_Sent_FW: "2025-08-20", Date_FW_Complete: "2025-09-02", Date_Systems_Updated: "2025-09-03", Date_LOCCS_Complete: "2025-09-04", Date_Contract_Executed: "2025-09-04" },
@@ -104,6 +189,11 @@ const DATES_INIT = {
   7: { Date_AMPS_Log_Created: "2025-09-20", Date_Rcvd_From_AE: "2025-09-22", Date_Sent_To_Funding: "2025-09-25", Date_Funding_Received_Package: "2025-09-26", Date_Sent_Fund_Req: "2025-09-28" },
   8: { Date_AMPS_Log_Created: "2025-08-01" },
 };
+
+const { contracts: GEN_CONTRACTS, dateMap: GEN_DATES } = generateContracts(92);
+const CONTRACTS_INIT = [...HANDCRAFTED, ...GEN_CONTRACTS]; // 100 total
+
+const DATES_INIT_ALL = { ...HANDCRAFTED_DATES, ...GEN_DATES };
 
 const ATTACHMENTS_INIT = {
   "1-1.0": [{ name: "AMPS_Log_Entry_10042.pdf", size: "124 KB", date: "2025-08-12", addedBy: "J. Rivera (HPA)" }],
@@ -164,7 +254,7 @@ export default function App() {
   // ── Approval flow state ──
   const [selectedContractId, setSelectedContractId] = useState(1);
   const [actingAs, setActingAs] = useState("self");
-  const [contractDates, setContractDates] = useState(() => { const o = {}; CONTRACTS_INIT.forEach(c => o[c.id] = { ...(DATES_INIT[c.id] || {}) }); return o; });
+  const [contractDates, setContractDates] = useState(() => { const o = {}; CONTRACTS_INIT.forEach(c => o[c.id] = { ...(DATES_INIT_ALL[c.id] || {}) }); return o; });
   const [attachments, setAttachments] = useState(ATTACHMENTS_INIT);
   const [notes, setNotes] = useState({});
   const [expandedStep, setExpandedStep] = useState(null);
@@ -177,6 +267,24 @@ export default function App() {
   ]);
   const fileInputRef = useRef(null);
   const [uploadTarget, setUploadTarget] = useState(null);
+
+  // ── New contract intake ──
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const emptyForm = { contractNum: "", fhaNum: "", propName: "", program: "Section 8", region: REGIONS[0], units: "", monthlyHAP: "", renewalOption: "Option 2: At/Below Comparable", contractExpiration: "" };
+  const [newForm, setNewForm] = useState(emptyForm);
+  const handleNewContract = () => {
+    const id = 9000 + CONTRACTS_INIT.length + Math.floor(Math.random() * 1000);
+    const staff = REGION_STAFF[newForm.region];
+    const c = { id, contractNum: newForm.contractNum || `HAP-${id}`, fhaNum: newForm.fhaNum || "000-00000", propName: newForm.propName || "New Property", program: newForm.program, region: newForm.region, ae: staff.aes[0], branchChief: staff.bcs[0], fundingSpec: staff.funds[0], units: parseInt(newForm.units) || 0, monthlyHAP: parseInt(newForm.monthlyHAP) || 0, renewalOption: newForm.program === "PRAC" ? "Standard Renewal" : newForm.renewalOption, contractExpiration: newForm.contractExpiration || daysFromNow(120) };
+    CONTRACTS_INIT.push(c);
+    setContractDates(p => ({ ...p, [id]: {} }));
+    setShowNewForm(false);
+    setNewForm(emptyForm);
+    selectContract(id);
+    setView("workflow");
+    setActivityLog(p => [{ time: new Date().toISOString().replace("T", " ").slice(0, 16), action: "New contract created", user: actingLabel, contract: c.contractNum }, ...p]);
+  };
 
   // ── Derived data ──
   const allContracts = useMemo(() => CONTRACTS_INIT.map(c => {
@@ -368,32 +476,101 @@ export default function App() {
            ═══════════════════════════════════════════════════════════════════ */}
         {view === "contracts" && (<div>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "10px 14px" }}>
-            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search contract, property, AE..." style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 24, width: 220, outline: "none" }} />
+            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search contract, property, AE..." style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 11, width: 220, outline: "none" }} />
             <Sel value={filterProgram} onChange={e => setFilterProgram(e.target.value)}><option value="All">All Programs</option>{PROGRAMS.map(p => <option key={p}>{p}</option>)}</Sel>
             <Sel value={filterRegion} onChange={e => setFilterRegion(e.target.value)}><option value="All">All Regions</option>{REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</Sel>
             <Sel value={filterAlert} onChange={e => setFilterAlert(e.target.value)}><option value="All">All Alerts</option><option value="expired">🔴 Expired</option><option value="30">🔴 ≤30d</option><option value="60">🟠 ≤60d</option><option value="90">🟡 ≤90d</option><option value="120">🔵 ≤120d</option><option value="none">🟢 &gt;120d</option></Sel>
-            <span style={{ marginLeft: "auto", fontSize: 24, color: "#64748b" }}><strong>{filtered.length}</strong> of {metrics.total}</span>
+            <span style={{ fontSize: 11, color: "#64748b" }}><strong>{filtered.length}</strong> of {metrics.total}</span>
+            <button onClick={() => setShowNewForm(true)} style={{ marginLeft: "auto", padding: "6px 14px", borderRadius: 8, border: "none", background: "#1e40af", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ New Contract</button>
           </div>
+
+          {/* Contract Detail Panel */}
+          {selectedDetail && (() => { const c = selectedDetail; const d = contractDates[c.id] || {}; const st = getAutoStatus(d); const al = getExpirationAlert(c.contractExpiration); const timeline = [
+            { phase: "INITIAL", label: "Documentation from AE", sent: null, rcvd: d.Date_Rcvd_From_AE },
+            { phase: "FUNDING", label: "Funding Request to HQ", sent: d.Date_Sent_Fund_Req, rcvd: d.Date_Fund_Rcvd_1 },
+            { phase: "SIGNATURE", label: "Owner/Agent Signature", sent: d.Date_Sent_OA_Sign, rcvd: d.Date_Rcvd_OA_Sign },
+            { phase: "SIGNATURE", label: "Branch Chief Review", sent: d.Date_Sent_BC_Sign, rcvd: d.Date_Rcvd_BC_Sign },
+            { phase: "PROCESSING", label: "Fort Worth Processing", sent: d.Date_Sent_FW, rcvd: d.Date_FW_Complete },
+            { phase: "COMPLETE", label: "Contract Executed", sent: null, rcvd: d.Date_Contract_Executed },
+          ]; return (
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 18, marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{c.contractNum} — {c.propName}</div>
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{c.fhaNum} &middot; {c.region} &middot; {c.units} units &middot; ${c.monthlyHAP.toLocaleString()}/mo &middot; {c.renewalOption}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <Pill color={al.color} bg={al.bg}>{al.icon} {al.label}</Pill>
+                  <StatusBadge status={st} />
+                  <button onClick={() => setSelectedDetail(null)} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontSize: 11, color: "#64748b" }}>✕</button>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 14, padding: "10px 0", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9" }}>
+                {[["Program", c.program], ["Account Executive", c.ae], ["Branch Chief", c.branchChief], ["Funding Specialist", c.fundingSpec], ["Contract Expiration", c.contractExpiration]].map(([l, v], i) => (
+                  <div key={i}><div style={{ fontSize: 9, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{l}</div><div style={{ fontSize: 12, fontWeight: 600, marginTop: 1 }}>{v}</div></div>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Workflow Timeline</div>
+              {timeline.map((s, i) => { const ta = (s.sent && s.rcvd) ? daysBetween(s.sent, s.rcvd) : null; const active = s.sent && !s.rcvd; const done = !!s.rcvd; const pCol = { INITIAL: "#60a5fa", FUNDING: "#f59e0b", SIGNATURE: "#a78bfa", PROCESSING: "#2dd4bf", COMPLETE: "#34d399" }[s.phase]; return (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 1fr 80px 80px 55px", padding: "6px 10px", borderRadius: 6, alignItems: "center", background: active ? "#fffbeb" : done ? "#f0fdf4" : "#fafbfc", border: active ? "1px solid #fde68a" : "1px solid transparent", marginBottom: 2 }}>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: pCol, textTransform: "uppercase" }}>{s.phase}</span>
+                  <span style={{ fontSize: 11, color: done ? "#1e293b" : "#94a3b8", fontWeight: done ? 600 : 400 }}>{done ? "✓" : active ? "●" : "○"} {s.label}</span>
+                  <span style={{ fontSize: 10, color: "#64748b" }}>{s.sent || "—"}</span>
+                  <span style={{ fontSize: 10, color: "#64748b" }}>{s.rcvd || (active ? <span style={{ color: "#f59e0b", fontWeight: 600 }}>Pending</span> : "—")}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, textAlign: "right", color: ta != null ? (ta > 14 ? "#ef4444" : "#16a34a") : "#cbd5e1" }}>{ta != null ? `${ta}d` : active ? "⏳" : "—"}</span>
+                </div>
+              ); })}
+              {d.Date_Rcvd_From_AE && d.Date_Contract_Executed && <div style={{ marginTop: 8, padding: "6px 10px", borderRadius: 6, background: "#eff6ff", border: "1px solid #bfdbfe", display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 11, fontWeight: 600, color: "#1e40af" }}>Total Cycle Time</span><span style={{ fontSize: 14, fontWeight: 700, color: "#1e40af" }}>{daysBetween(d.Date_Rcvd_From_AE, d.Date_Contract_Executed)} days</span></div>}
+              <div style={{ marginTop: 10 }}><button onClick={() => { selectContract(c.id); setView("workflow"); setSelectedDetail(null); }} style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: "#1e40af", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Open Approval Flow →</button></div>
+            </div>
+          ); })()}
+
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 24, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
               <div>Contract</div><div>Property</div><div>Program</div><div>Region</div><div>AE</div><div>Alert</div><div>Status</div>
             </div>
             <div style={{ maxHeight: 480, overflowY: "auto" }}>
               {filtered.map(c => (
-                <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }}
-                  style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 24, cursor: "pointer", alignItems: "center" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <div key={c.id} onClick={() => setSelectedDetail(c)}
+                  style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, cursor: "pointer", alignItems: "center", background: selectedDetail?.id === c.id ? "#eff6ff" : "transparent" }}
+                  onMouseEnter={e => { if (selectedDetail?.id !== c.id) e.currentTarget.style.background = "#f8fafc"; }} onMouseLeave={e => { if (selectedDetail?.id !== c.id) e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</div>
                   <div style={{ color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.propName}</div>
                   <div style={{ color: "#64748b" }}>{c.program}</div>
                   <div style={{ color: "#64748b" }}>{c.region.split(" - ")[1]}</div>
                   <div style={{ color: "#64748b" }}>{c.ae}</div>
-                  <div><span style={{ fontSize: 17, color: c.alert.color, fontWeight: 600 }}>{c.alert.icon} {c.alert.label}</span></div>
+                  <div><span style={{ fontSize: 10, color: c.alert.color, fontWeight: 600 }}>{c.alert.icon} {c.alert.label}</span></div>
                   <StatusBadge status={c.status} />
                 </div>
               ))}
             </div>
           </div>
+
+          {/* New Contract Modal */}
+          {showNewForm && (<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }} onClick={() => setShowNewForm(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 24, width: 480, maxHeight: "80vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>New Contract</div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {[["Contract Number", "contractNum", "HAP-XXXXX"], ["FHA Number", "fhaNum", "000-00000"], ["Property Name", "propName", "Property name"]].map(([label, field, ph]) => (
+                  <div key={field}><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>{label}</div><input placeholder={ph} value={newForm[field]} onChange={e => setNewForm(p => ({ ...p, [field]: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, outline: "none" }} /></div>
+                ))}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>Program</div><Sel value={newForm.program} onChange={e => setNewForm(p => ({ ...p, program: e.target.value }))} style={{ width: "100%" }}>{PROGRAMS.map(p => <option key={p}>{p}</option>)}</Sel></div>
+                  <div><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>Region</div><Sel value={newForm.region} onChange={e => setNewForm(p => ({ ...p, region: e.target.value }))} style={{ width: "100%" }}>{REGIONS.map(r => <option key={r} value={r}>{r.split(" - ")[1]}</option>)}</Sel></div>
+                </div>
+                {newForm.program === "Section 8" && <div><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>Renewal Option</div><Sel value={newForm.renewalOption} onChange={e => setNewForm(p => ({ ...p, renewalOption: e.target.value }))} style={{ width: "100%" }}>{RENEWAL_OPTS_S8.map(o => <option key={o}>{o}</option>)}</Sel></div>}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  <div><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>Units</div><input type="number" value={newForm.units} onChange={e => setNewForm(p => ({ ...p, units: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, outline: "none" }} /></div>
+                  <div><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>Monthly HAP ($)</div><input type="number" value={newForm.monthlyHAP} onChange={e => setNewForm(p => ({ ...p, monthlyHAP: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, outline: "none" }} /></div>
+                  <div><div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 3 }}>Expiration</div><input type="date" value={newForm.contractExpiration} onChange={e => setNewForm(p => ({ ...p, contractExpiration: e.target.value }))} style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, outline: "none" }} /></div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 18, justifyContent: "flex-end" }}>
+                <button onClick={() => setShowNewForm(false)} style={{ padding: "7px 18px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 12, cursor: "pointer", color: "#64748b" }}>Cancel</button>
+                <button onClick={handleNewContract} style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: "#1e40af", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Create Contract</button>
+              </div>
+            </div>
+          </div>)}
         </div>)}
 
         {/* ═══════════════════════════════════════════════════════════════════
