@@ -233,12 +233,12 @@ function fileIcon(name) {
 }
 
 // ── Small Components ─────────────────────────────────────────────────────
-const Pill = ({ children, color, bg }) => (<span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: bg || color + "22", color, border: `1px solid ${color}44` }}>{children}</span>);
-const StatusBadge = ({ status }) => (<Pill color={status.color}><span style={{ width: 7, height: 7, borderRadius: "50%", background: status.color }} />{status.label}</Pill>);
-const RoleBadge = ({ roleKey }) => { const r = ROLES[roleKey]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: r.bg, color: r.color, border: `1px solid ${r.color}33` }}>{r.icon} {r.short}</span>; };
-const Metric = ({ label, value, sub, accent }) => (<div style={{ padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid #e2e8f0", flex: 1, minWidth: 130 }}><div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 5 }}>{label}</div><div style={{ fontSize: 26, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1.1 }}>{value}</div>{sub && <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>{sub}</div>}</div>);
+const Pill = ({ children, color, bg }) => (<span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600, background: bg || color + "22", color, border: `1px solid ${color}44`, whiteSpace: "nowrap" }}>{children}</span>);
+const StatusBadge = ({ status }) => (<Pill color={status.color}><span style={{ width: 6, height: 6, borderRadius: "50%", background: status.color, flexShrink: 0 }} />{status.label}</Pill>);
+const RoleBadge = ({ roleKey }) => { const r = ROLES[roleKey]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 5, fontSize: 9, fontWeight: 700, background: r.bg, color: r.color, border: `1px solid ${r.color}33`, whiteSpace: "nowrap" }}>{r.icon} {r.short}</span>; };
+const Metric = ({ label, value, sub, accent }) => (<div style={{ padding: "12px 14px", borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", flex: 1, minWidth: 110 }}><div style={{ fontSize: 9, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div><div style={{ fontSize: 22, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1.1 }}>{value}</div>{sub && <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2 }}>{sub}</div>}</div>);
 const Bar = ({ pct, color }) => (<div style={{ height: 5, borderRadius: 3, background: "#e2e8f0", width: "100%" }}><div style={{ height: 5, borderRadius: 3, background: color, width: `${Math.min(pct, 100)}%`, transition: "width 0.4s" }} /></div>);
-const Sel = (props) => (<select {...props} style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #cbd5e1", fontSize: 11, background: "#fff", outline: "none", fontWeight: 500, cursor: "pointer", ...props.style }}>{props.children}</select>);
+const Sel = (props) => (<select {...props} style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 11, background: "#fff", outline: "none", fontWeight: 500, cursor: "pointer", ...props.style }}>{props.children}</select>);
 
 // ══════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -388,7 +388,7 @@ export default function App() {
   ];
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', -apple-system, sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
+    <div style={{ fontFamily: "'Segoe UI', -apple-system, sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a", fontSize: 12 }}>
       <input type="file" ref={fileInputRef} style={{ display: "none" }} multiple onChange={handleFileInput} />
 
       {/* Prototype Banner */}
@@ -435,10 +435,10 @@ export default function App() {
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {STATUS_CODES.filter(s => s.code !== "99").map(s => {
                 const ct = metrics.byStatus[s.code]; const pct = Math.round((ct / metrics.total) * 100);
-                return (<div key={s.code} onClick={() => { setView("contracts"); }} style={{ flex: `${Math.max(pct, 8)} 0 0`, minWidth: 90, padding: "10px 12px", borderRadius: 10, background: s.color + "12", border: `1px solid ${s.color}33`, cursor: "pointer" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{ct}</div>
-                  <div style={{ fontSize: 10, color: s.color, fontWeight: 600 }}>{s.label}</div>
-                  <div style={{ fontSize: 9, color: "#94a3b8" }}>{pct}%</div>
+                return (<div key={s.code} onClick={() => { setView("contracts"); }} style={{ flex: `${Math.max(pct, 8)} 0 0`, minWidth: 80, padding: "8px 10px", borderRadius: 8, background: s.color + "12", border: `1px solid ${s.color}33`, cursor: "pointer" }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{ct}</div>
+                  <div style={{ fontSize: 9, color: s.color, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</div>
+                  <div style={{ fontSize: 8, color: "#94a3b8" }}>{pct}%</div>
                 </div>);
               })}
             </div>
@@ -512,7 +512,7 @@ export default function App() {
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Workflow Timeline</div>
               {timeline.map((s, i) => { const ta = (s.sent && s.rcvd) ? daysBetween(s.sent, s.rcvd) : null; const active = s.sent && !s.rcvd; const done = !!s.rcvd; const pCol = { INITIAL: "#60a5fa", FUNDING: "#f59e0b", SIGNATURE: "#a78bfa", PROCESSING: "#2dd4bf", COMPLETE: "#34d399" }[s.phase]; return (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 1fr 80px 80px 55px", padding: "6px 10px", borderRadius: 6, alignItems: "center", background: active ? "#fffbeb" : done ? "#f0fdf4" : "#fafbfc", border: active ? "1px solid #fde68a" : "1px solid transparent", marginBottom: 2 }}>
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "70px 1fr 75px 75px 50px", padding: "6px 10px", borderRadius: 6, alignItems: "center", background: active ? "#fffbeb" : done ? "#f0fdf4" : "#fafbfc", border: active ? "1px solid #fde68a" : "1px solid transparent", marginBottom: 2 }}>
                   <span style={{ fontSize: 8, fontWeight: 700, color: pCol, textTransform: "uppercase" }}>{s.phase}</span>
                   <span style={{ fontSize: 11, color: done ? "#1e293b" : "#94a3b8", fontWeight: done ? 600 : 400 }}>{done ? "✓" : active ? "●" : "○"} {s.label}</span>
                   <span style={{ fontSize: 10, color: "#64748b" }}>{s.sent || "—"}</span>
@@ -526,13 +526,13 @@ export default function App() {
           ); })()}
 
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "100px 1.5fr 70px 100px 80px 70px 130px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
               <div>Contract</div><div>Property</div><div>Program</div><div>Region</div><div>AE</div><div>Alert</div><div>Status</div>
             </div>
             <div style={{ maxHeight: 480, overflowY: "auto" }}>
               {filtered.map(c => (
                 <div key={c.id} onClick={() => setSelectedDetail(c)}
-                  style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, cursor: "pointer", alignItems: "center", background: selectedDetail?.id === c.id ? "#eff6ff" : "transparent" }}
+                  style={{ display: "grid", gridTemplateColumns: "100px 1.5fr 70px 100px 80px 70px 130px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, cursor: "pointer", alignItems: "center", background: selectedDetail?.id === c.id ? "#eff6ff" : "transparent" }}
                   onMouseEnter={e => { if (selectedDetail?.id !== c.id) e.currentTarget.style.background = "#f8fafc"; }} onMouseLeave={e => { if (selectedDetail?.id !== c.id) e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</div>
                   <div style={{ color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.propName}</div>
@@ -648,7 +648,7 @@ export default function App() {
                   {steps.map(step => {
                     const ss = getStepStatus(step); const isExp = expandedStep === step.id; const done = ss === "complete"; const cur = ss === "current"; const att = getAtt(step.id); const nxt = step.forwardTo ? WORKFLOW_STEPS.find(s => s.id === step.forwardTo) : null;
                     return (<div key={step.id} style={{ borderRadius: 8, border: cur ? `2px solid ${phase.color}` : done ? "1px solid #d1fae5" : "1px solid #e2e8f0", background: cur ? phase.bg : done ? "#f0fdf4" : "#fff", boxShadow: cur ? `0 0 0 2px ${phase.color}22` : "none", opacity: step.isOptional && !dates[step.dateField] ? 0.5 : step.isCorrection && !dates[step.dateField] ? 0.5 : 1 }}>
-                      <div onClick={() => setExpandedStep(isExp ? null : step.id)} style={{ display: "grid", gridTemplateColumns: "42px 68px 1fr auto 100px 20px", padding: "6px 12px", alignItems: "center", gap: 6, cursor: "pointer", overflow: "hidden" }}>
+                      <div onClick={() => setExpandedStep(isExp ? null : step.id)} style={{ display: "grid", gridTemplateColumns: "40px 62px 1fr auto 90px 18px", padding: "6px 12px", alignItems: "center", gap: 6, cursor: "pointer", overflow: "hidden" }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: done ? "#16a34a" : cur ? phase.color : "#94a3b8" }}>{done ? "✓" : cur ? "●" : "○"} {step.id}</span>
                         <RoleBadge roleKey={step.role} />
                         <div>
@@ -716,10 +716,10 @@ export default function App() {
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Bottleneck Identification</div>
             {[{ stage: "HQ Funding", avg: metrics.avgFund, target: 10, color: "#f59e0b" }, { stage: "Owner Signature", avg: metrics.avgOA, target: 10, color: "#a78bfa" }, { stage: "Branch Chief", avg: metrics.avgBC, target: 5, color: "#60a5fa" }, { stage: "Fort Worth", avg: metrics.avgFW, target: 10, color: "#2dd4bf" }].sort((a, b) => b.avg - a.avg).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <div style={{ width: 150, fontSize: 11, color: "#475569" }}>{item.stage}</div>
+                <div style={{ width: 120, fontSize: 11, whiteSpace: "nowrap", color: "#475569" }}>{item.stage}</div>
                 <div style={{ flex: 1 }}><Bar pct={(item.avg / 30) * 100} color={item.avg > item.target ? "#ef4444" : item.color} /></div>
-                <div style={{ width: 50, textAlign: "right", fontSize: 11, fontWeight: 700, color: item.avg > item.target ? "#ef4444" : "#16a34a" }}>{item.avg}d</div>
-                <div style={{ width: 55, textAlign: "right", fontSize: 9, color: "#94a3b8" }}>target: {item.target}d</div>
+                <div style={{ width: 45, textAlign: "right", fontSize: 11, fontWeight: 700, color: item.avg > item.target ? "#ef4444" : "#16a34a" }}>{item.avg}d</div>
+                <div style={{ width: 55, textAlign: "right", fontSize: 9, whiteSpace: "nowrap", color: "#94a3b8" }}>target: {item.target}d</div>
               </div>
             ))}
           </div>
@@ -740,11 +740,11 @@ export default function App() {
         {view === "regional" && (<div>
           <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Cross-Regional Performance</div>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.7, overflow: "hidden" }}>
-              <div>Region</div><div>Total</div><div>Done</div><div>Awaiting</div><div>Corrections</div><div>Avg Cycle</div><div>Completion</div>
+            <div style={{ display: "grid", gridTemplateColumns: "110px 50px 50px 65px 75px 70px 1fr", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.7, overflow: "hidden" }}>
+              <div>Region</div><div>Total</div><div>Done</div><div>Wait</div><div>Corr.</div><div>Cycle</div><div>Completion</div>
             </div>
             {regionMetrics.sort((a, b) => b.pct - a.pct).map((r, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, alignItems: "center" }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 50px 50px 65px 75px 70px 1fr", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, alignItems: "center" }}>
                 <div style={{ fontWeight: 600 }}>{r.region}</div>
                 <div>{r.total}</div>
                 <div style={{ color: "#16a34a", fontWeight: 600 }}>{r.complete}</div>
@@ -765,7 +765,7 @@ export default function App() {
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
             {activityLog.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 12 }}>No activity yet.</div>}
             {activityLog.map((e, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 90px 1fr 170px", padding: "6px 12px", borderRadius: 6, background: "#fafbfc", border: "1px solid #f1f5f9", marginBottom: 3, fontSize: 11, alignItems: "center", gap: 6, overflow: "hidden" }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 85px 1fr 140px", padding: "6px 12px", borderRadius: 6, background: "#fafbfc", border: "1px solid #f1f5f9", marginBottom: 3, fontSize: 11, alignItems: "center", gap: 6, overflow: "hidden" }}>
                 <span style={{ color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{e.time}</span>
                 <span style={{ fontWeight: 600, color: "#1e40af" }}>{e.contract}</span>
                 <span>{e.action}</span>
