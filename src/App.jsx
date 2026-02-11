@@ -143,12 +143,12 @@ function fileIcon(name) {
 }
 
 // ── Small Components ─────────────────────────────────────────────────────
-const Pill = ({ children, color, bg }) => (<span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: bg || color + "22", color, border: `1px solid ${color}44` }}>{children}</span>);
+const Pill = ({ children, color, bg }) => (<span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 20, fontSize: 24, fontWeight: 600, background: bg || color + "22", color, border: `1px solid ${color}44` }}>{children}</span>);
 const StatusBadge = ({ status }) => (<Pill color={status.color}><span style={{ width: 7, height: 7, borderRadius: "50%", background: status.color }} />{status.label}</Pill>);
-const RoleBadge = ({ roleKey }) => { const r = ROLES[roleKey]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: r.bg, color: r.color, border: `1px solid ${r.color}33` }}>{r.icon} {r.short}</span>; };
-const Metric = ({ label, value, sub, accent }) => (<div style={{ padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid #e2e8f0", flex: 1, minWidth: 130 }}><div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 5 }}>{label}</div><div style={{ fontSize: 26, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1.1 }}>{value}</div>{sub && <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>{sub}</div>}</div>);
+const RoleBadge = ({ roleKey }) => { const r = ROLES[roleKey]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 5, fontSize: 17, fontWeight: 700, background: r.bg, color: r.color, border: `1px solid ${r.color}33` }}>{r.icon} {r.short}</span>; };
+const Metric = ({ label, value, sub, accent }) => (<div style={{ padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid #e2e8f0", flex: 1, minWidth: 130 }}><div style={{ fontSize: 17, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 5 }}>{label}</div><div style={{ fontSize: 32, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1.1 }}>{value}</div>{sub && <div style={{ fontSize: 17, color: "#94a3b8", marginTop: 3 }}>{sub}</div>}</div>);
 const Bar = ({ pct, color }) => (<div style={{ height: 5, borderRadius: 3, background: "#e2e8f0", width: "100%" }}><div style={{ height: 5, borderRadius: 3, background: color, width: `${Math.min(pct, 100)}%`, transition: "width 0.4s" }} /></div>);
-const Sel = (props) => (<select {...props} style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #cbd5e1", fontSize: 11, background: "#fff", outline: "none", fontWeight: 500, cursor: "pointer", ...props.style }}>{props.children}</select>);
+const Sel = (props) => (<select {...props} style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #cbd5e1", fontSize: 24, background: "#fff", outline: "none", fontWeight: 500, cursor: "pointer", ...props.style }}>{props.children}</select>);
 
 // ══════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -285,22 +285,22 @@ export default function App() {
 
       {/* Prototype Banner */}
       <div style={{ background: "#fef2f2", borderBottom: "2px solid #fecaca", padding: "5px 24px", textAlign: "center" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: 0.3 }}>PROTOTYPE — Contract Funding Approval Flow &middot; HUD Multifamily Housing &middot; Attachments, routing &amp; delegation are simulated for demo</span>
+        <span style={{ fontSize: 24, fontWeight: 700, color: "#dc2626", letterSpacing: 0.3 }}>PROTOTYPE — Contract Funding Approval Flow &middot; HUD Multifamily Housing &middot; Attachments, routing &amp; delegation are simulated for demo</span>
       </div>
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg, #0c2d6b 0%, #1e40af 50%, #1d4ed8 100%)", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>H</div>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff" }}>H</div>
           <div>
-            <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>Funding Workflow Tracker</div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10 }}>HUD Multifamily Housing</div>
+            <div style={{ color: "#fff", fontSize: 17, fontWeight: 700 }}>Funding Workflow Tracker</div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>HUD Multifamily Housing</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 1, background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: 2 }}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => setView(n.id)}
-              style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 600, background: view === n.id ? "rgba(255,255,255,0.95)" : "transparent", color: view === n.id ? "#1e40af" : "rgba(255,255,255,0.65)" }}>
+              style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 17, fontWeight: 600, background: view === n.id ? "rgba(255,255,255,0.95)" : "transparent", color: view === n.id ? "#1e40af" : "rgba(255,255,255,0.65)" }}>
               {n.icon} {n.label}
             </button>
           ))}
@@ -323,14 +323,14 @@ export default function App() {
           </div>
           {/* Pipeline */}
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px", marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>Funding Request Pipeline</div>
+            <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>Funding Request Pipeline</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {STATUS_CODES.filter(s => s.code !== "99").map(s => {
                 const ct = metrics.byStatus[s.code]; const pct = Math.round((ct / metrics.total) * 100);
                 return (<div key={s.code} onClick={() => { setView("contracts"); }} style={{ flex: `${Math.max(pct, 8)} 0 0`, minWidth: 90, padding: "10px 12px", borderRadius: 10, background: s.color + "12", border: `1px solid ${s.color}33`, cursor: "pointer" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{ct}</div>
-                  <div style={{ fontSize: 10, color: s.color, fontWeight: 600 }}>{s.label}</div>
-                  <div style={{ fontSize: 9, color: "#94a3b8" }}>{pct}%</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{ct}</div>
+                  <div style={{ fontSize: 17, color: s.color, fontWeight: 600 }}>{s.label}</div>
+                  <div style={{ fontSize: 24, color: "#94a3b8" }}>{pct}%</div>
                 </div>);
               })}
             </div>
@@ -338,22 +338,22 @@ export default function App() {
           {/* Two Column */}
           <div style={{ display: "flex", gap: 14, marginBottom: 16, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 320, background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>Avg Turnaround by Stage</div>
+              <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>Avg Turnaround by Stage</div>
               {[{ label: "HQ Funding", days: metrics.avgFund, target: 10, color: "#f59e0b" }, { label: "Owner Signature", days: metrics.avgOA, target: 10, color: "#a78bfa" }, { label: "Branch Chief", days: metrics.avgBC, target: 5, color: "#60a5fa" }, { label: "Fort Worth", days: metrics.avgFW, target: 10, color: "#2dd4bf" }, { label: "End-to-End", days: metrics.avgCycle, target: 60, color: "#1e40af" }].map((item, i) => (
                 <div key={i} style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                    <span style={{ fontSize: 11, color: "#475569" }}>{item.label}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: item.days > item.target ? "#ef4444" : "#16a34a" }}>{item.days}d {item.days > item.target ? "⚠" : "✓"}</span>
+                    <span style={{ fontSize: 24, color: "#475569" }}>{item.label}</span>
+                    <span style={{ fontSize: 24, fontWeight: 700, color: item.days > item.target ? "#ef4444" : "#16a34a" }}>{item.days}d {item.days > item.target ? "⚠" : "✓"}</span>
                   </div>
                   <Bar pct={(item.days / item.target) * 100} color={item.days > item.target ? "#ef4444" : item.color} />
                 </div>
               ))}
             </div>
             <div style={{ flex: 1, minWidth: 320, background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>⚠ Needs Attention</div>
+              <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: "#1e293b" }}>⚠ Needs Attention</div>
               <div style={{ display: "grid", gap: 4 }}>
                 {allContracts.filter(c => ["90", "03"].includes(c.status.code) || c.alert.level === "expired" || c.alert.level === "30").slice(0, 6).map(c => (
-                  <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderRadius: 8, background: "#fafbfc", border: "1px solid #f1f5f9", cursor: "pointer", fontSize: 11 }}>
+                  <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderRadius: 8, background: "#fafbfc", border: "1px solid #f1f5f9", cursor: "pointer", fontSize: 14 }}>
                     <div><span style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</span> <span style={{ color: "#94a3b8", marginLeft: 6 }}>{c.propName}</span></div>
                     <StatusBadge status={c.status} />
                   </div>
@@ -368,27 +368,27 @@ export default function App() {
            ═══════════════════════════════════════════════════════════════════ */}
         {view === "contracts" && (<div>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center", background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "10px 14px" }}>
-            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search contract, property, AE..." style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 11, width: 220, outline: "none" }} />
+            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search contract, property, AE..." style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 24, width: 220, outline: "none" }} />
             <Sel value={filterProgram} onChange={e => setFilterProgram(e.target.value)}><option value="All">All Programs</option>{PROGRAMS.map(p => <option key={p}>{p}</option>)}</Sel>
             <Sel value={filterRegion} onChange={e => setFilterRegion(e.target.value)}><option value="All">All Regions</option>{REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</Sel>
             <Sel value={filterAlert} onChange={e => setFilterAlert(e.target.value)}><option value="All">All Alerts</option><option value="expired">🔴 Expired</option><option value="30">🔴 ≤30d</option><option value="60">🟠 ≤60d</option><option value="90">🟡 ≤90d</option><option value="120">🔵 ≤120d</option><option value="none">🟢 &gt;120d</option></Sel>
-            <span style={{ marginLeft: "auto", fontSize: 11, color: "#64748b" }}><strong>{filtered.length}</strong> of {metrics.total}</span>
+            <span style={{ marginLeft: "auto", fontSize: 24, color: "#64748b" }}><strong>{filtered.length}</strong> of {metrics.total}</span>
           </div>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 24, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8 }}>
               <div>Contract</div><div>Property</div><div>Program</div><div>Region</div><div>AE</div><div>Alert</div><div>Status</div>
             </div>
             <div style={{ maxHeight: 480, overflowY: "auto" }}>
               {filtered.map(c => (
                 <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }}
-                  style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, cursor: "pointer", alignItems: "center" }}
+                  style={{ display: "grid", gridTemplateColumns: "110px 1fr 80px 110px 90px 80px 150px", padding: "8px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 24, cursor: "pointer", alignItems: "center" }}
                   onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                   <div style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</div>
                   <div style={{ color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.propName}</div>
                   <div style={{ color: "#64748b" }}>{c.program}</div>
                   <div style={{ color: "#64748b" }}>{c.region.split(" - ")[1]}</div>
                   <div style={{ color: "#64748b" }}>{c.ae}</div>
-                  <div><span style={{ fontSize: 10, color: c.alert.color, fontWeight: 600 }}>{c.alert.icon} {c.alert.label}</span></div>
+                  <div><span style={{ fontSize: 17, color: c.alert.color, fontWeight: 600 }}>{c.alert.icon} {c.alert.label}</span></div>
                   <StatusBadge status={c.status} />
                 </div>
               ))}
@@ -415,8 +415,8 @@ export default function App() {
               <optgroup label="Account Executives">{STAFF.filter(s => s.role === "Account Executive").map(s => <option key={s.id} value={s.id}>{s.name} — AE ({s.region})</option>)}</optgroup>
               <optgroup label="Funding Specialists">{STAFF.filter(s => s.role === "Funding Specialist").map(s => <option key={s.id} value={s.id}>{s.name} — Fund ({s.region})</option>)}</optgroup>
             </Sel>
-            {actingAs !== "self" && <span style={{ fontSize: 10, color: "#92400e", fontWeight: 600, background: "#fef3c7", padding: "3px 8px", borderRadius: 6 }}>⚠ Acting as {actingStaff.name} <button onClick={() => setActingAs("self")} style={{ border: "none", background: "none", color: "#92400e", cursor: "pointer", fontWeight: 800 }}>✕</button></span>}
-            <label style={{ marginLeft: "auto", fontSize: 10, color: "#1e40af", display: "flex", alignItems: "center", gap: 3, cursor: "pointer" }}><input type="checkbox" checked={showProgramNotes} onChange={e => setShowProgramNotes(e.target.checked)} /> Program notes</label>
+            {actingAs !== "self" && <span style={{ fontSize: 17, color: "#92400e", fontWeight: 600, background: "#fef3c7", padding: "3px 8px", borderRadius: 6 }}>⚠ Acting as {actingStaff.name} <button onClick={() => setActingAs("self")} style={{ border: "none", background: "none", color: "#92400e", cursor: "pointer", fontWeight: 800 }}>✕</button></span>}
+            <label style={{ marginLeft: "auto", fontSize: 17, color: "#1e40af", display: "flex", alignItems: "center", gap: 3, cursor: "pointer" }}><input type="checkbox" checked={showProgramNotes} onChange={e => setShowProgramNotes(e.target.checked)} /> Program notes</label>
           </div>
 
           {/* Contract card */}
@@ -424,9 +424,9 @@ export default function App() {
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "12px 18px", marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 6 }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>{contract.contractNum} — {contract.propName}</div>
-                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{contract.fhaNum} &middot; {contract.region} &middot; {contract.units} units &middot; ${contract.monthlyHAP.toLocaleString()}/mo</div>
-                <div style={{ fontSize: 10, color: "#475569", marginTop: 3 }}>👤 AE: <strong>{contract.ae}</strong> &nbsp; ✍ BC: <strong>{contract.branchChief}</strong> &nbsp; 💰 Funding: <strong>{contract.fundingSpec}</strong></div>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{contract.contractNum} — {contract.propName}</div>
+                <div style={{ fontSize: 17, color: "#64748b", marginTop: 2 }}>{contract.fhaNum} &middot; {contract.region} &middot; {contract.units} units &middot; ${contract.monthlyHAP.toLocaleString()}/mo</div>
+                <div style={{ fontSize: 17, color: "#475569", marginTop: 3 }}>👤 AE: <strong>{contract.ae}</strong> &nbsp; ✍ BC: <strong>{contract.branchChief}</strong> &nbsp; 💰 Funding: <strong>{contract.fundingSpec}</strong></div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
                 <div style={{ display: "flex", gap: 5 }}>
@@ -438,7 +438,7 @@ export default function App() {
             </div>
             <div style={{ display: "flex", gap: 5, marginTop: 10 }}>
               {PHASES.map(p => { const ps = WORKFLOW_STEPS.filter(s => s.phase === p.id && s.dateField && !s.isCorrection); const dn = ps.filter(s => dates[s.dateField]).length; return (
-                <div key={p.id} style={{ flex: 1 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span style={{ fontSize: 8, fontWeight: 700, color: p.color, textTransform: "uppercase" }}>P{p.id}</span><span style={{ fontSize: 8, color: "#94a3b8" }}>{dn}/{ps.length}</span></div><Bar pct={ps.length ? (dn / ps.length) * 100 : 0} color={p.color} /></div>
+                <div key={p.id} style={{ flex: 1 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span style={{ fontSize: 17, fontWeight: 700, color: p.color, textTransform: "uppercase" }}>P{p.id}</span><span style={{ fontSize: 17, color: "#94a3b8" }}>{dn}/{ps.length}</span></div><Bar pct={ps.length ? (dn / ps.length) * 100 : 0} color={p.color} /></div>
               ); })}
             </div>
           </div>
@@ -456,14 +456,14 @@ export default function App() {
 
               return (<div key={phase.id} style={{ marginBottom: 10 }}>
                 <div onClick={() => togglePhase(phase.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 10, background: phase.bg, border: `1px solid ${phase.border}`, cursor: "pointer" }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: allDone ? "#16a34a" : phase.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700 }}>{allDone ? "✓" : phase.id}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: allDone ? "#16a34a" : phase.color }}>{phase.name}</span>
-                  {collapsed && <span style={{ fontSize: 10, marginLeft: 6, color: allDone ? "#16a34a" : noStart ? "#94a3b8" : hasActive ? "#fff" : "#d97706", fontWeight: 600, ...(hasActive && !allDone ? { background: phase.color, padding: "1px 7px", borderRadius: 10 } : {}) }}>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: allDone ? "#16a34a" : phase.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 17, fontWeight: 700 }}>{allDone ? "✓" : phase.id}</span>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: allDone ? "#16a34a" : phase.color }}>{phase.name}</span>
+                  {collapsed && <span style={{ fontSize: 17, marginLeft: 6, color: allDone ? "#16a34a" : noStart ? "#94a3b8" : hasActive ? "#fff" : "#d97706", fontWeight: 600, ...(hasActive && !allDone ? { background: phase.color, padding: "1px 7px", borderRadius: 10 } : {}) }}>
                     {allDone ? "All complete" : noStart ? "Not started" : hasActive ? "● Active" : `${doneCt}/${totalCt}`}
                   </span>}
                   <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 9, color: phase.color, opacity: 0.6 }}>{doneCt}/{totalCt}</span>
-                    <span style={{ fontSize: 12, color: phase.color, opacity: 0.5, transform: collapsed ? "none" : "rotate(90deg)", transition: "transform 0.15s" }}>▸</span>
+                    <span style={{ fontSize: 24, color: phase.color, opacity: 0.6 }}>{doneCt}/{totalCt}</span>
+                    <span style={{ fontSize: 17, color: phase.color, opacity: 0.5, transform: collapsed ? "none" : "rotate(90deg)", transition: "transform 0.15s" }}>▸</span>
                   </div>
                 </div>
 
@@ -472,48 +472,48 @@ export default function App() {
                     const ss = getStepStatus(step); const isExp = expandedStep === step.id; const done = ss === "complete"; const cur = ss === "current"; const att = getAtt(step.id); const nxt = step.forwardTo ? WORKFLOW_STEPS.find(s => s.id === step.forwardTo) : null;
                     return (<div key={step.id} style={{ borderRadius: 8, border: cur ? `2px solid ${phase.color}` : done ? "1px solid #d1fae5" : "1px solid #e2e8f0", background: cur ? phase.bg : done ? "#f0fdf4" : "#fff", boxShadow: cur ? `0 0 0 2px ${phase.color}22` : "none", opacity: step.isOptional && !dates[step.dateField] ? 0.5 : step.isCorrection && !dates[step.dateField] ? 0.5 : 1 }}>
                       <div onClick={() => setExpandedStep(isExp ? null : step.id)} style={{ display: "grid", gridTemplateColumns: "42px 68px 1fr auto 100px 20px", padding: "6px 12px", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: done ? "#16a34a" : cur ? phase.color : "#94a3b8" }}>{done ? "✓" : cur ? "●" : "○"} {step.id}</span>
+                        <span style={{ fontSize: 17, fontWeight: 700, color: done ? "#16a34a" : cur ? phase.color : "#94a3b8" }}>{done ? "✓" : cur ? "●" : "○"} {step.id}</span>
                         <RoleBadge roleKey={step.role} />
                         <div>
-                          <span style={{ fontSize: 11, fontWeight: done || cur ? 600 : 400, color: done ? "#166534" : cur ? "#1e293b" : "#64748b" }}>{step.label}</span>
-                          {step.isDecision && <span style={{ marginLeft: 5, fontSize: 8, color: "#d97706", fontWeight: 700 }}>◆ DECISION</span>}
-                          {step.isCorrection && <span style={{ marginLeft: 5, fontSize: 8, color: "#dc2626", fontWeight: 700 }}>↩ CORRECTION</span>}
-                          {step.isFinal && <span style={{ marginLeft: 5, fontSize: 8, color: "#059669", fontWeight: 700 }}>★ FINAL</span>}
+                          <span style={{ fontSize: 24, fontWeight: done || cur ? 600 : 400, color: done ? "#166534" : cur ? "#1e293b" : "#64748b" }}>{step.label}</span>
+                          {step.isDecision && <span style={{ marginLeft: 5, fontSize: 17, color: "#d97706", fontWeight: 700 }}>◆ DECISION</span>}
+                          {step.isCorrection && <span style={{ marginLeft: 5, fontSize: 17, color: "#dc2626", fontWeight: 700 }}>↩ CORRECTION</span>}
+                          {step.isFinal && <span style={{ marginLeft: 5, fontSize: 17, color: "#059669", fontWeight: 700 }}>★ FINAL</span>}
                         </div>
-                        {att.length > 0 ? <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "#e0f2fe", color: "#0369a1" }}>📎{att.length}</span> : <span />}
-                        <div style={{ textAlign: "right" }}>{step.dateField && dates[step.dateField] ? <span style={{ fontSize: 10, fontWeight: 600, color: "#16a34a" }}>{dates[step.dateField]}</span> : step.dateField ? <span style={{ fontSize: 9, color: cur ? phase.color : "#cbd5e1" }}>{cur ? "⏳ Awaiting" : "—"}</span> : null}</div>
-                        <span style={{ fontSize: 10, color: "#94a3b8", transform: isExp ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>▸</span>
+                        {att.length > 0 ? <span style={{ fontSize: 24, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "#e0f2fe", color: "#0369a1" }}>📎{att.length}</span> : <span />}
+                        <div style={{ textAlign: "right" }}>{step.dateField && dates[step.dateField] ? <span style={{ fontSize: 17, fontWeight: 600, color: "#16a34a" }}>{dates[step.dateField]}</span> : step.dateField ? <span style={{ fontSize: 24, color: cur ? phase.color : "#cbd5e1" }}>{cur ? "⏳ Awaiting" : "—"}</span> : null}</div>
+                        <span style={{ fontSize: 17, color: "#94a3b8", transform: isExp ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>▸</span>
                       </div>
 
                       {isExp && (<div style={{ borderTop: "1px solid #e2e8f0", background: "#fafbfc", padding: "10px 14px 10px 50px" }}>
-                        <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 8 }}>{step.description}</div>
-                        {showProgramNotes && step.programNote && step.programNote !== "BOTH" && <div style={{ fontSize: 10, color: "#92400e", background: "#fef3c7", padding: "6px 10px", borderRadius: 6, marginBottom: 8, border: "1px solid #fde68a", whiteSpace: "pre-line" }}>⚙ {step.programNote}</div>}
+                        <div style={{ fontSize: 24, color: "#475569", lineHeight: 1.5, marginBottom: 8 }}>{step.description}</div>
+                        {showProgramNotes && step.programNote && step.programNote !== "BOTH" && <div style={{ fontSize: 17, color: "#92400e", background: "#fef3c7", padding: "6px 10px", borderRadius: 6, marginBottom: 8, border: "1px solid #fde68a", whiteSpace: "pre-line" }}>⚙ {step.programNote}</div>}
                         {step.dateField && <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                          <span style={{ fontSize: 9, fontFamily: "monospace", background: "#f1f5f9", padding: "2px 5px", borderRadius: 4, color: "#64748b" }}>{step.dateField}</span>
-                          <input type="date" value={dates[step.dateField] || ""} onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); setDate(step.dateField, e.target.value); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 11, outline: "none" }} />
-                          {dates[step.dateField] && <button onClick={e => { e.stopPropagation(); clearDate(step.dateField); }} style={{ padding: "2px 7px", borderRadius: 6, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 9, cursor: "pointer" }}>Clear</button>}
-                          {step.dateField === "Date_Fund_Rcvd_1" && dates.Date_Sent_Fund_Req && dates.Date_Fund_Rcvd_1 && <span style={{ fontSize: 10, color: "#1e40af", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_Fund_Req, dates.Date_Fund_Rcvd_1)}d</span>}
-                          {step.dateField === "Date_Rcvd_OA_Sign" && dates.Date_Sent_OA_Sign && dates.Date_Rcvd_OA_Sign && <span style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_OA_Sign, dates.Date_Rcvd_OA_Sign)}d</span>}
-                          {step.dateField === "Date_Rcvd_BC_Sign" && dates.Date_Sent_BC_Sign && dates.Date_Rcvd_BC_Sign && <span style={{ fontSize: 10, color: "#059669", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_BC_Sign, dates.Date_Rcvd_BC_Sign)}d</span>}
-                          {step.dateField === "Date_FW_Complete" && dates.Date_Sent_FW && dates.Date_FW_Complete && <span style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_FW, dates.Date_FW_Complete)}d</span>}
-                          {step.isFinal && dates.Date_Rcvd_From_AE && dates.Date_Contract_Executed && <span style={{ fontSize: 11, color: "#047857", fontWeight: 700, padding: "2px 8px", background: "#d1fae5", borderRadius: 6 }}>🏁 {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d total</span>}
+                          <span style={{ fontSize: 24, fontFamily: "monospace", background: "#f1f5f9", padding: "2px 5px", borderRadius: 4, color: "#64748b" }}>{step.dateField}</span>
+                          <input type="date" value={dates[step.dateField] || ""} onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); setDate(step.dateField, e.target.value); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 24, outline: "none" }} />
+                          {dates[step.dateField] && <button onClick={e => { e.stopPropagation(); clearDate(step.dateField); }} style={{ padding: "2px 7px", borderRadius: 6, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 24, cursor: "pointer" }}>Clear</button>}
+                          {step.dateField === "Date_Fund_Rcvd_1" && dates.Date_Sent_Fund_Req && dates.Date_Fund_Rcvd_1 && <span style={{ fontSize: 17, color: "#1e40af", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_Fund_Req, dates.Date_Fund_Rcvd_1)}d</span>}
+                          {step.dateField === "Date_Rcvd_OA_Sign" && dates.Date_Sent_OA_Sign && dates.Date_Rcvd_OA_Sign && <span style={{ fontSize: 17, color: "#7c3aed", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_OA_Sign, dates.Date_Rcvd_OA_Sign)}d</span>}
+                          {step.dateField === "Date_Rcvd_BC_Sign" && dates.Date_Sent_BC_Sign && dates.Date_Rcvd_BC_Sign && <span style={{ fontSize: 17, color: "#059669", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_BC_Sign, dates.Date_Rcvd_BC_Sign)}d</span>}
+                          {step.dateField === "Date_FW_Complete" && dates.Date_Sent_FW && dates.Date_FW_Complete && <span style={{ fontSize: 17, color: "#7c3aed", fontWeight: 600 }}>⏱ {daysBetween(dates.Date_Sent_FW, dates.Date_FW_Complete)}d</span>}
+                          {step.isFinal && dates.Date_Rcvd_From_AE && dates.Date_Contract_Executed && <span style={{ fontSize: 24, color: "#047857", fontWeight: 700, padding: "2px 8px", background: "#d1fae5", borderRadius: 6 }}>🏁 {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d total</span>}
                         </div>}
                         {/* Attachments */}
                         <div style={{ marginBottom: 6 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#475569" }}>📎 Attachments ({att.length})</span><button onClick={e => { e.stopPropagation(); setUploadTarget(step.id); fileInputRef.current?.click(); }} style={{ padding: "2px 8px", borderRadius: 6, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>+ Attach</button></div>
-                          {att.map((a, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 5, background: "#fff", border: "1px solid #e2e8f0", marginBottom: 2, fontSize: 10 }}><span>{fileIcon(a.name)}</span><span style={{ flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span><span style={{ color: "#94a3b8", fontSize: 9 }}>{a.size} &middot; {a.date}</span><button onClick={e => { e.stopPropagation(); const k = `${selectedContractId}-${step.id}`; setAttachments(p => ({ ...p, [k]: (p[k] || []).filter((_, j) => j !== i) })); }} style={{ border: "none", background: "none", color: "#dc2626", cursor: "pointer", fontSize: 10 }}>✕</button></div>))}
-                          {att.length === 0 && <div style={{ fontSize: 10, color: "#94a3b8", fontStyle: "italic" }}>No attachments</div>}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><span style={{ fontSize: 17, fontWeight: 700, color: "#475569" }}>📎 Attachments ({att.length})</span><button onClick={e => { e.stopPropagation(); setUploadTarget(step.id); fileInputRef.current?.click(); }} style={{ padding: "2px 8px", borderRadius: 6, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", fontSize: 24, fontWeight: 700, cursor: "pointer" }}>+ Attach</button></div>
+                          {att.map((a, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 5, background: "#fff", border: "1px solid #e2e8f0", marginBottom: 2, fontSize: 13 }}><span>{fileIcon(a.name)}</span><span style={{ flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span><span style={{ color: "#94a3b8", fontSize: 12 }}>{a.size} &middot; {a.date}</span><button onClick={e => { e.stopPropagation(); const k = `${selectedContractId}-${step.id}`; setAttachments(p => ({ ...p, [k]: (p[k] || []).filter((_, j) => j !== i) })); }} style={{ border: "none", background: "none", color: "#dc2626", cursor: "pointer", fontSize: 13 }}>✕</button></div>))}
+                          {att.length === 0 && <div style={{ fontSize: 17, color: "#94a3b8", fontStyle: "italic" }}>No attachments</div>}
                         </div>
                         {/* Notes */}
-                        <textarea placeholder="Notes..." value={notes[`${selectedContractId}-${step.id}`] || ""} onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); setNotes(p => ({ ...p, [`${selectedContractId}-${step.id}`]: e.target.value })); }} style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 10, fontFamily: "inherit", resize: "vertical", minHeight: 26, outline: "none" }} />
+                        <textarea placeholder="Notes..." value={notes[`${selectedContractId}-${step.id}`] || ""} onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); setNotes(p => ({ ...p, [`${selectedContractId}-${step.id}`]: e.target.value })); }} style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 17, fontFamily: "inherit", resize: "vertical", minHeight: 26, outline: "none" }} />
                         {/* Forward */}
                         {step.forwardTo && !step.isFinal && (<div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                          {forwardConfirm === `${step.id}-f` ? (<><button onClick={e => { e.stopPropagation(); handleForward(step, step.forwardTo); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: phase.color, color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button><button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontSize: 10, cursor: "pointer" }}>Cancel</button></>
-                          ) : (<button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-f`); }} style={{ padding: "4px 12px", borderRadius: 8, border: "none", background: cur ? phase.color : "#e2e8f0", color: cur ? "#fff" : "#475569", fontSize: 10, fontWeight: 700, cursor: "pointer", boxShadow: cur ? `0 2px 6px ${phase.color}44` : "none" }}>{step.forwardLabel} → {nxt && <RoleBadge roleKey={nxt.role} />}</button>)}
-                          {step.altForwardTo && (<>{forwardConfirm === `${step.id}-a` ? (<><button onClick={e => { e.stopPropagation(); handleForward(step, step.altForwardTo); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button><button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", fontSize: 10, cursor: "pointer", color: "#64748b" }}>Cancel</button></>) : (<button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-a`); }} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{step.altForwardLabel} ↩</button>)}</>)}
-                          {actingAs !== "self" && <span style={{ fontSize: 9, color: "#92400e", fontStyle: "italic" }}>as {actingStaff.name}</span>}
+                          {forwardConfirm === `${step.id}-f` ? (<><button onClick={e => { e.stopPropagation(); handleForward(step, step.forwardTo); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: phase.color, color: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button><button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontSize: 17, cursor: "pointer" }}>Cancel</button></>
+                          ) : (<button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-f`); }} style={{ padding: "4px 12px", borderRadius: 8, border: "none", background: cur ? phase.color : "#e2e8f0", color: cur ? "#fff" : "#475569", fontSize: 17, fontWeight: 700, cursor: "pointer", boxShadow: cur ? `0 2px 6px ${phase.color}44` : "none" }}>{step.forwardLabel} → {nxt && <RoleBadge roleKey={nxt.role} />}</button>)}
+                          {step.altForwardTo && (<>{forwardConfirm === `${step.id}-a` ? (<><button onClick={e => { e.stopPropagation(); handleForward(step, step.altForwardTo); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#dc2626", color: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer" }}>✓ Confirm</button><button onClick={e => { e.stopPropagation(); setForwardConfirm(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", fontSize: 17, cursor: "pointer", color: "#64748b" }}>Cancel</button></>) : (<button onClick={e => { e.stopPropagation(); setForwardConfirm(`${step.id}-a`); }} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 17, fontWeight: 600, cursor: "pointer" }}>{step.altForwardLabel} ↩</button>)}</>)}
+                          {actingAs !== "self" && <span style={{ fontSize: 24, color: "#92400e", fontStyle: "italic" }}>as {actingStaff.name}</span>}
                         </div>)}
-                        {step.isFinal && dates.Date_Contract_Executed && <div style={{ marginTop: 8, padding: "8px", borderRadius: 6, background: "#f0fdf4", textAlign: "center", border: "1px solid #bbf7d0" }}><span style={{ fontSize: 13, fontWeight: 700, color: "#047857" }}>🎉 Complete — {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d cycle</span></div>}
+                        {step.isFinal && dates.Date_Contract_Executed && <div style={{ marginTop: 8, padding: "8px", borderRadius: 6, background: "#f0fdf4", textAlign: "center", border: "1px solid #bbf7d0" }}><span style={{ fontSize: 24, fontWeight: 700, color: "#047857" }}>🎉 Complete — {daysBetween(dates.Date_Rcvd_From_AE, dates.Date_Contract_Executed)}d cycle</span></div>}
                       </div>)}
                     </div>);
                   })}
@@ -536,20 +536,20 @@ export default function App() {
             <Metric label="Avg Total Cycle" value={`${metrics.avgCycle}d`} sub="Target: 60d" accent={metrics.avgCycle > 60 ? "#ef4444" : "#16a34a"} />
           </div>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px", marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Bottleneck Identification</div>
+            <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Bottleneck Identification</div>
             {[{ stage: "HQ Funding", avg: metrics.avgFund, target: 10, color: "#f59e0b" }, { stage: "Owner Signature", avg: metrics.avgOA, target: 10, color: "#a78bfa" }, { stage: "Branch Chief", avg: metrics.avgBC, target: 5, color: "#60a5fa" }, { stage: "Fort Worth", avg: metrics.avgFW, target: 10, color: "#2dd4bf" }].sort((a, b) => b.avg - a.avg).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <div style={{ width: 150, fontSize: 11, color: "#475569" }}>{item.stage}</div>
+                <div style={{ width: 150, fontSize: 24, color: "#475569" }}>{item.stage}</div>
                 <div style={{ flex: 1 }}><Bar pct={(item.avg / 30) * 100} color={item.avg > item.target ? "#ef4444" : item.color} /></div>
-                <div style={{ width: 50, textAlign: "right", fontSize: 11, fontWeight: 700, color: item.avg > item.target ? "#ef4444" : "#16a34a" }}>{item.avg}d</div>
-                <div style={{ width: 55, textAlign: "right", fontSize: 9, color: "#94a3b8" }}>target: {item.target}d</div>
+                <div style={{ width: 50, textAlign: "right", fontSize: 24, fontWeight: 700, color: item.avg > item.target ? "#ef4444" : "#16a34a" }}>{item.avg}d</div>
+                <div style={{ width: 55, textAlign: "right", fontSize: 24, color: "#94a3b8" }}>target: {item.target}d</div>
               </div>
             ))}
           </div>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 18px" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Longest Processing Contracts</div>
+            <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Longest Processing Contracts</div>
             {allContracts.filter(c => c.dates.Date_Rcvd_From_AE && c.dates.Date_Contract_Executed).map(c => ({ ...c, days: daysBetween(c.dates.Date_Rcvd_From_AE, c.dates.Date_Contract_Executed) })).sort((a, b) => b.days - a.days).slice(0, 6).map(c => (
-              <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderRadius: 8, marginBottom: 3, cursor: "pointer", background: "#fafbfc", border: "1px solid #f1f5f9", fontSize: 11 }}>
+              <div key={c.id} onClick={() => { selectContract(c.id); setView("workflow"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderRadius: 8, marginBottom: 3, cursor: "pointer", background: "#fafbfc", border: "1px solid #f1f5f9", fontSize: 14 }}>
                 <div><span style={{ fontWeight: 600, color: "#1e40af" }}>{c.contractNum}</span> <span style={{ color: "#94a3b8", marginLeft: 6 }}>{c.propName}</span></div>
                 <span style={{ fontWeight: 700, color: c.days > 60 ? "#ef4444" : "#f59e0b" }}>{c.days}d</span>
               </div>
@@ -561,20 +561,20 @@ export default function App() {
             REGIONAL
            ═══════════════════════════════════════════════════════════════════ */}
         {view === "regional" && (<div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Cross-Regional Performance</div>
+          <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 14 }}>Cross-Regional Performance</div>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 9, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.7 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "8px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 24, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.7 }}>
               <div>Region</div><div>Total</div><div>Done</div><div>Awaiting</div><div>Corrections</div><div>Avg Cycle</div><div>Completion</div>
             </div>
             {regionMetrics.sort((a, b) => b.pct - a.pct).map((r, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 11, alignItems: "center" }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 55px 55px 75px 80px 80px 1fr", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontSize: 24, alignItems: "center" }}>
                 <div style={{ fontWeight: 600 }}>{r.region}</div>
                 <div>{r.total}</div>
                 <div style={{ color: "#16a34a", fontWeight: 600 }}>{r.complete}</div>
                 <div style={{ color: r.awaiting > 1 ? "#f59e0b" : "#64748b", fontWeight: r.awaiting > 1 ? 600 : 400 }}>{r.awaiting}</div>
                 <div style={{ color: r.corrections > 0 ? "#ef4444" : "#64748b", fontWeight: r.corrections > 0 ? 600 : 400 }}>{r.corrections}</div>
                 <div style={{ fontWeight: 700, color: r.avgCycle === null ? "#94a3b8" : r.avgCycle > 60 ? "#ef4444" : "#16a34a" }}>{r.avgCycle != null ? `${r.avgCycle}d` : "—"}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Bar pct={r.pct} color={r.pct > 50 ? "#34d399" : r.pct > 25 ? "#f59e0b" : "#ef4444"} /><span style={{ fontSize: 10, fontWeight: 600, minWidth: 28 }}>{r.pct}%</span></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Bar pct={r.pct} color={r.pct > 50 ? "#34d399" : r.pct > 25 ? "#f59e0b" : "#ef4444"} /><span style={{ fontSize: 17, fontWeight: 600, minWidth: 28 }}>{r.pct}%</span></div>
               </div>
             ))}
           </div>
@@ -584,12 +584,12 @@ export default function App() {
             ACTIVITY LOG
            ═══════════════════════════════════════════════════════════════════ */}
         {view === "activity" && (<div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Activity Log — All Routing Actions</div>
+          <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 14 }}>Activity Log — All Routing Actions</div>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
-            {activityLog.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 12 }}>No activity yet.</div>}
+            {activityLog.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 15 }}>No activity yet.</div>}
             {activityLog.map((e, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 90px 1fr 170px", padding: "6px 12px", borderRadius: 6, background: "#fafbfc", border: "1px solid #f1f5f9", marginBottom: 3, fontSize: 11, alignItems: "center", gap: 6 }}>
-                <span style={{ color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{e.time}</span>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 90px 1fr 170px", padding: "6px 12px", borderRadius: 6, background: "#fafbfc", border: "1px solid #f1f5f9", marginBottom: 3, fontSize: 24, alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#64748b", fontFamily: "monospace", fontSize: 13 }}>{e.time}</span>
                 <span style={{ fontWeight: 600, color: "#1e40af" }}>{e.contract}</span>
                 <span>{e.action}</span>
                 <span style={{ color: e.user.includes("acting") ? "#92400e" : "#64748b", textAlign: "right", fontWeight: e.user.includes("acting") ? 600 : 400 }}>{e.user}</span>
@@ -598,7 +598,7 @@ export default function App() {
           </div>
         </div>)}
 
-        <div style={{ textAlign: "center", padding: "14px 0 6px", fontSize: 9, color: "#94a3b8" }}>HUD Multifamily Housing &middot; Funding Workflow Tracker</div>
+        <div style={{ textAlign: "center", padding: "14px 0 6px", fontSize: 24, color: "#94a3b8" }}>HUD Multifamily Housing &middot; Funding Workflow Tracker</div>
       </div>
     </div>
   );
